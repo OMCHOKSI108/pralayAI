@@ -194,12 +194,6 @@ export default function StudentDashboard({
       return;
     }
 
-    const studentId = window.localStorage.getItem('hellwareStudentId');
-    if (!studentId) {
-      onShowToast('Apply first so the backend can create your student record before payment upload.', 'warn');
-      return;
-    }
-
     setPaymentScreenshotUploaded(file.name);
     setPaymentStatus('VALIDATING');
     setDidContribute(true);
@@ -208,13 +202,16 @@ export default function StudentDashboard({
 
     try {
       const cleanEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '').slice(0, 24) || 'student';
+      const studentId = window.localStorage.getItem('hellwareStudentId') || cleanEmail;
       const result = await uploadBackendPaymentProof({
         studentId,
         amountPaid: 149,
         transactionHash: `HW-${cleanEmail}-${Date.now()}`,
         screenshot: file
       });
-      window.localStorage.setItem('hellwarePaymentId', result.paymentId);
+      if (result?.paymentId) {
+        window.localStorage.setItem('hellwarePaymentId', result.paymentId);
+      }
       onUpdateStage('PAYMENT_SUBMITTED');
       onShowToast(`Receipt uploaded to backend audit queue: ${file.name}`, 'success');
     } catch (error) {

@@ -921,11 +921,11 @@ export function printOfferLetter(
           gap: 12px;
         }
 
-        .company-details {
-          display: flex;
-          flex-col: column;
-          text-align: left;
-        }
+  .company-details {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+  }
 
         .comp-name {
           font-size: 13pt;
@@ -1383,10 +1383,10 @@ export function printWeeklyReport(
         }
 
         .signatures-grid {
-          display: flex;
-          justify-content: space-between;
-          align-align: flex-end;
-          margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 40px;
         }
 
         .signature-block {
@@ -1553,10 +1553,16 @@ function executeIframePrint(html: string) {
     doc.write(html);
     doc.close();
 
-    // Small delay to allow CSS loading and rendering before starting OS print
     setTimeout(() => {
-      printFrame.contentWindow?.focus();
-      printFrame.contentWindow?.print();
+      try {
+        printFrame.contentWindow?.focus();
+        printFrame.contentWindow?.print();
+      } catch {
+        const fallbackWin = window.open();
+        if (fallbackWin) {
+          fallbackWin.document.write(html);
+        }
+      }
     }, 750);
   }
 }

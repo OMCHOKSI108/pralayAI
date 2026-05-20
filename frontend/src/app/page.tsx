@@ -119,18 +119,27 @@ export default function Home() {
   });
 
   const getStudentTimeline = useCallback((email: string): TimelineStep[] => {
-    if (!timelines[email]) return DEFAULT_TIMELINE.map(s => ({ ...s }));
-    return timelines[email];
-  }, [timelines]);
+    if (typeof window === 'undefined') return DEFAULT_TIMELINE.map(s => ({ ...s }));
+    try {
+      const saved = localStorage.getItem('hellware_timelines');
+      const all: Record<string, TimelineStep[]> = saved ? JSON.parse(saved) : {};
+      if (!all[email]) return DEFAULT_TIMELINE.map(s => ({ ...s }));
+      return all[email].map(s => ({ ...s }));
+    } catch { return DEFAULT_TIMELINE.map(s => ({ ...s })); }
+  }, []);
 
   const AUTO_CERTIFICATE_DELAY_MS = 60000;
 
-  const handleAdvanceTimeline = useCallback(async (email: string, stepId: string, autoAdvanceDelay?: number) => {
-    const currentSteps = timelines[email] || DEFAULT_TIMELINE.map(s => ({ ...s }));
+  const handleAdvanceTimeline = useCallback(async (email: string, stepId: string, studentName?: string, autoAdvanceDelay?: number) => {
+    if (typeof window === 'undefined') return { success: false, error: 'Server-side only' };
+    try {
+      const saved = localStorage.getItem('hellware_timelines');
+      const allTimelines: Record<string, TimelineStep[]> = saved ? JSON.parse(saved) : {};
+    const currentSteps = allTimelines[email] || DEFAULT_TIMELINE.map(s => ({ ...s }));
     const step = currentSteps.find(s => s.id === stepId);
     if (!step || step.status !== 'PENDING') return { success: false, error: 'Step already completed' };
 
-    const studentName = simState.fullName;
+    const name = studentName || simState.fullName;
     const studentEmail = email;
 
     try {
@@ -138,14 +147,14 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          studentName,
+          studentName: name,
           studentEmail,
           internshipDomain: 'Cyber Security',
           emailType: step.emailType,
         }),
       });
       const groqData = await groqRes.json();
-      const emailContent = groqData.success ? groqData.data.emailContent : `Hello ${studentName}, this is regarding your internship at Hellware. (Automated step: ${step.label})`;
+      const emailContent = groqData.success ? groqData.data.emailContent : `Hello ${name}, this is regarding your internship at Hellware. (Automated step: ${step.label})`;
 
       const htmlContent = emailContent
         .replace(/\n/g, '<br/>')
@@ -164,11 +173,14 @@ export default function Home() {
       const emailData = await emailRes.json();
 
       if (emailData.success) {
-        const updatedSteps = currentSteps.map(s =>
-          s.id === stepId ? { ...s, status: 'REFLECTED' as const, sentAt: new Date().toISOString() } : s
-        );
         setTimelines(prev => {
-          const next = { ...prev, [email]: updatedSteps };
+          const prevSteps = prev[email] || DEFAULT_TIMELINE.map(s => ({ ...s }));
+          const existingStep = prevSteps.find(s => s.id === stepId);
+          if (!existingStep || existingStep.status !== 'PENDING') return prev;
+          const nextSteps = prevSteps.map(s =>
+            s.id === stepId ? { ...s, status: 'REFLECTED' as const, sentAt: new Date().toISOString() } : s
+          );
+          const next = { ...prev, [email]: nextSteps };
           localStorage.setItem('hellware_timelines', JSON.stringify(next));
           return next;
         });
@@ -176,7 +188,13 @@ export default function Home() {
 
         if (autoAdvanceDelay && autoAdvanceDelay > 0) {
           setTimeout(() => {
-            handleAdvanceTimeline(email, 'certificate_issued');
+            const innerSaved = localStorage.getItem('hellware_timelines');
+            const innerAll: Record<string, TimelineStep[]> = innerSaved ? JSON.parse(innerSaved) : {};
+            const innerSteps = innerAll[email] || DEFAULT_TIMELINE.map(s => ({ ...s }));
+            const certStep = innerSteps.find(s => s.id === 'certificate_issued');
+            if (certStep && certStep.status === 'PENDING') {
+              handleAdvanceTimeline(email, 'certificate_issued', name);
+            }
           }, autoAdvanceDelay);
         }
 
@@ -186,7 +204,10 @@ export default function Home() {
     } catch {
       return { success: false, error: 'Failed to send email' };
     }
-  }, [timelines, simState.fullName]);
+  } catch {
+    return { success: false, error: 'Failed to read timeline state' };
+  }
+  }, [simState.fullName]);
 
   function stageForStep(stepId: string): StudentStage {
     const map: Record<string, StudentStage> = {

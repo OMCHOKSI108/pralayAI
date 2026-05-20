@@ -60,7 +60,7 @@ interface AdminDashboardProps {
   studentStages?: Record<string, string>;
   onUpdateStudentStage?: (email: string, stage: string) => void;
   timelines?: Record<string, TimelineStep[]>;
-  onAdvanceTimeline?: (email: string, stepId: string, autoDelay?: number) => Promise<{ success: boolean; error?: string }>;
+  onAdvanceTimeline?: (email: string, stepId: string, studentName?: string, autoDelay?: number) => Promise<{ success: boolean; error?: string }>;
   getStudentTimeline?: (email: string) => TimelineStep[];
 }
 
@@ -87,6 +87,7 @@ export default function AdminDashboard({
 
   // Student detail view
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [timelineSelectedId, setTimelineSelectedId] = useState<string | null>(null);
   const [studentDetailTab, setStudentDetailTab] = useState<'PROFILE' | 'TASKS' | 'SUBMISSIONS' | 'PROGRESS'>('PROFILE');
   const [studentSearch, setStudentSearch] = useState('');
 
@@ -1308,14 +1309,13 @@ export default function AdminDashboard({
                     <div className="lg:col-span-4 space-y-2 max-h-[600px] overflow-y-auto pr-2">
                       {allStudents.map((s) => {
                         const steps = getStudentTimeline?.(s.email) || DEFAULT_TIMELINE.map(x => ({ ...x }));
-                        const sentCount = steps.filter(st => st.status === 'EMAIL_SENT' || st.status === 'REFLECTED').length;
-                        const reflectedCount = steps.filter(st => st.status === 'REFLECTED').length;
+                        const sentCount = steps.filter(st => st.status === 'REFLECTED').length;
                         return (
                           <button
                             key={s.id}
-                            onClick={() => setSelectedStudentId(s.id)}
+                            onClick={() => setTimelineSelectedId(s.id)}
                             className={`w-full text-left p-4 rounded-lg border text-xs transition-all cursor-pointer ${
-                              selectedStudentId === s.id
+                              timelineSelectedId === s.id
                                 ? 'bg-white/10 border-white text-white'
                                 : 'bg-neutral-900/40 border-white/5 text-gray-400 hover:border-white/10'
                             }`}
@@ -1330,9 +1330,7 @@ export default function AdminDashboard({
                             <div className="mt-2 flex gap-1">
                               {steps.map((st, i) => (
                                 <span key={st.id} className={`w-2 h-2 rounded-full inline-block ${
-                                  st.status === 'REFLECTED' ? 'bg-emerald-400' :
-                                  st.status === 'EMAIL_SENT' ? 'bg-amber-500' :
-                                  'bg-gray-700'
+                                  st.status === 'REFLECTED' ? 'bg-emerald-400' : 'bg-gray-700'
                                 }`} title={`${st.label}: ${st.status}`} />
                               ))}
                             </div>
@@ -1343,7 +1341,7 @@ export default function AdminDashboard({
 
                     <div className="lg:col-span-8">
                       {(() => {
-                        const selected = allStudents.find(s => s.id === selectedStudentId);
+                        const selected = allStudents.find(s => s.id === timelineSelectedId);
                         if (!selected) return (
                           <div className="p-12 border border-white/5 border-dashed rounded text-center text-xs font-mono text-gray-500">
                             Select a student to view their email timeline
@@ -1406,12 +1404,12 @@ export default function AdminDashboard({
                                               onClick={async () => {
                                                 setSendingStepEmail(step.id);
                                                 const delay = step.id === 'payment_verified' ? 60000 : undefined;
-                                                const result = await onAdvanceTimeline?.(selected.email, step.id, delay);
+                                                const result = await onAdvanceTimeline?.(selected.email, step.id, selected.fullName, delay);
                                                 setSendingStepEmail(null);
                                                 if (result?.success) {
                                                   const msg = step.id === 'payment_verified'
                                                     ? `Payment verified! Certificate will auto-issue in ~60s (simulating 1-day delay).`
-                                                    : `Automated: ${step.label} — email sent + dashboard unlocked`;
+                                                    : `Automated: ${step.label} — email sent to ${selected.fullName} + dashboard unlocked`;
                                                   onShowToast(msg, 'success');
                                                 } else {
                                                   onShowToast(result?.error || 'Failed', 'error');
@@ -1572,7 +1570,7 @@ export default function AdminDashboard({
                 >
                   <option value="Intermediate">Intermediate</option>
                   <option value="Expert">Expert</option>
-                  <option value="Expert">Advance</option>
+                  <option value="Advanced">Advance</option>
                 </select>
               </div>
             </div>

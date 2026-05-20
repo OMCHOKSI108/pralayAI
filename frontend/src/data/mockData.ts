@@ -212,6 +212,21 @@ export const INITIAL_PROJECTS: StudentProject[] = [
 
 export const INITIAL_APPLICATIONS: StudentApplication[] = [
   {
+    id: 'app-0',
+    fullName: 'Alex Mercer',
+    email: 'omchoksi99@gmail.com',
+    phone: '+91 98765 43210',
+    college: 'IIIT Hyderabad',
+    gradYear: '2027',
+    domainInterest: 'Cybersecurity',
+    skills: ['React', 'TypeScript', 'Docker', 'Go'],
+    githubProfile: 'https://github.com/alexmercer',
+    linkedinProfile: 'https://linkedin.com/in/alexmercer',
+    resumeFileName: 'alex_mercer_cv.pdf',
+    status: 'ACCEPTED',
+    appliedDate: '2026-05-10'
+  },
+  {
     id: 'app-1',
     fullName: 'Rohan Sharma',
     email: 'rohan.sharma@iitd.ac.in',
