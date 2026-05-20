@@ -13,6 +13,8 @@ import {
 import { 
   StudentApplication, StudentProject, Submission, Resource, AuditLog, Track, TRACKS 
 } from '@/data/mockData';
+import type { TimelineStep } from '@/app/page';
+import { DEFAULT_TIMELINE } from '@/app/page';
 
 interface BackendApp {
   id: string; fullName: string; email: string; phone: string | null;
@@ -57,6 +59,10 @@ interface AdminDashboardProps {
   onBackendVerifyPayment?: (id: string, status: string, reason?: string) => void;
   studentStages?: Record<string, string>;
   onUpdateStudentStage?: (email: string, stage: string) => void;
+  timelines?: Record<string, TimelineStep[]>;
+  onSendTimelineEmail?: (email: string, stepId: string) => Promise<{ success: boolean; error?: string }>;
+  onReflectTimelineStep?: (email: string, stepId: string) => void;
+  getStudentTimeline?: (email: string) => TimelineStep[];
 }
 
 export default function AdminDashboard({
@@ -68,11 +74,12 @@ export default function AdminDashboard({
   auditLogs, onWriteAuditLog, onShowToast,
   authToken, backendApplications, backendMetrics, onBackendUpdateApp,
   backendPayments, onBackendVerifyPayment,
-  studentStages, onUpdateStudentStage
+  studentStages, onUpdateStudentStage,
+  timelines, onSendTimelineEmail, onReflectTimelineStep, getStudentTimeline
 }: AdminDashboardProps) {
 
   // Selected sub view paths
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'APPLICATIONS' | 'STUDENTS' | 'PROJECTS' | 'SUBMISSIONS' | 'RESOURCES' | 'BROADCAST' | 'AUDIT_LOGS' | 'PAYMENTS' | 'CERTIFICATES'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'APPLICATIONS' | 'STUDENTS' | 'PROJECTS' | 'SUBMISSIONS' | 'RESOURCES' | 'BROADCAST' | 'AUDIT_LOGS' | 'PAYMENTS' | 'CERTIFICATES' | 'TIMELINE'>('TIMELINE');
 
   // Application filter states
   const [appSearch, setAppSearch] = useState('');
@@ -92,6 +99,7 @@ export default function AdminDashboard({
   // Stage control states
   const [generatedEmail, setGeneratedEmail] = useState<string>('');
   const [emailLoading, setEmailLoading] = useState(false);
+  const [sendingStepEmail, setSendingStepEmail] = useState<string | null>(null);
 
   // Project creator states
   const [projectFormOpen, setProjectFormOpen] = useState(false);
@@ -252,6 +260,7 @@ export default function AdminDashboard({
               { id: 'CERTIFICATES', label: 'CERTIFICATES', icon: <Award className="w-4 h-4" /> },
               { id: 'RESOURCES', label: 'INTEL ASSETS', icon: <BookOpen className="w-4 h-4" /> },
               { id: 'BROADCAST', label: 'EMAIL BROADCAST', icon: <Mail className="w-4 h-4" /> },
+              { id: 'TIMELINE', label: 'MAIL ORCHESTRATION', icon: <Send className="w-4 h-4 text-emerald-400" /> },
               { id: 'AUDIT_LOGS', label: 'CRITICAL AUDIT LOGS', icon: <Terminal className="w-4 h-4" /> },
             ].map((stb) => (
               <button
@@ -1268,6 +1277,176 @@ export default function AdminDashboard({
                 </div>
 
               </div>
+            </div>
+          )}
+
+          {/* ======================================================= */}
+          {/* K. MAIL ORCHESTRATION TIMELINE                          */}
+          {/* ======================================================= */}
+          {activeTab === 'TIMELINE' && (
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/10 pb-6 gap-4">
+                <div className="space-y-2">
+                  <span className="text-gray-500 font-mono text-xs uppercase block">// MAIL_ORCHESTRATION</span>
+                  <h1 className="text-3xl font-black text-white">EMAIL TIMELINE ORCHESTRATOR</h1>
+                  <p className="text-gray-400 text-xs">Follow the timeline for each student. Generate + send emails at each step. After the reflection delay, the student dashboard updates.</p>
+                </div>
+              </div>
+
+              {(() => {
+                const mockStudents = applications.map(a => ({
+                  id: a.id, fullName: a.fullName, email: a.email,
+                  college: a.college, skills: a.skills,
+                }));
+                const backendList = (backendApplications || []).map(a => ({
+                  id: a.id, fullName: a.fullName, email: a.email,
+                  college: a.college || '',
+                }));
+                const allStudents = [...backendList, ...mockStudents.filter(m => !backendList.some(b => b.email === m.email))];
+
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <div className="lg:col-span-4 space-y-2 max-h-[600px] overflow-y-auto pr-2">
+                      {allStudents.map((s) => {
+                        const steps = getStudentTimeline?.(s.email) || DEFAULT_TIMELINE.map(x => ({ ...x }));
+                        const sentCount = steps.filter(st => st.status === 'EMAIL_SENT' || st.status === 'REFLECTED').length;
+                        const reflectedCount = steps.filter(st => st.status === 'REFLECTED').length;
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => setSelectedStudentId(s.id)}
+                            className={`w-full text-left p-4 rounded-lg border text-xs transition-all cursor-pointer ${
+                              selectedStudentId === s.id
+                                ? 'bg-white/10 border-white text-white'
+                                : 'bg-neutral-900/40 border-white/5 text-gray-400 hover:border-white/10'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="font-bold text-white block uppercase text-[11px]">{s.fullName}</span>
+                                <span className="text-[9px] text-gray-500 font-mono block">{s.email}</span>
+                              </div>
+                              <span className="text-[9px] font-mono text-gray-500">{sentCount}/8</span>
+                            </div>
+                            <div className="mt-2 flex gap-1">
+                              {steps.map((st, i) => (
+                                <span key={st.id} className={`w-2 h-2 rounded-full inline-block ${
+                                  st.status === 'REFLECTED' ? 'bg-emerald-400' :
+                                  st.status === 'EMAIL_SENT' ? 'bg-amber-500' :
+                                  'bg-gray-700'
+                                }`} title={`${st.label}: ${st.status}`} />
+                              ))}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="lg:col-span-8">
+                      {(() => {
+                        const selected = allStudents.find(s => s.id === selectedStudentId);
+                        if (!selected) return (
+                          <div className="p-12 border border-white/5 border-dashed rounded text-center text-xs font-mono text-gray-500">
+                            Select a student to view their email timeline
+                          </div>
+                        );
+
+                        const steps = getStudentTimeline?.(selected.email) || DEFAULT_TIMELINE.map(x => ({ ...x }));
+
+                        return (
+                          <div className="space-y-4">
+                            <div className="bg-neutral-900/60 border border-white/5 rounded-xl p-4">
+                              <div className="flex justify-between items-center mb-4">
+                                <div>
+                                  <span className="font-bold text-white text-sm uppercase">{selected.fullName}</span>
+                                  <span className="text-[10px] text-gray-500 font-mono block">{selected.email}</span>
+                                </div>
+                                <span className="text-[9px] font-mono px-2 py-1 rounded bg-neutral-800 text-gray-400">
+                                  Stage: {studentStages?.[selected.email] || 'APPLIED'}
+                                </span>
+                              </div>
+
+                              <div className="space-y-2">
+                                {steps.map((step, idx) => {
+                                  const isActive = step.status === 'PENDING';
+                                  const isSent = step.status === 'EMAIL_SENT';
+                                  const isReflected = step.status === 'REFLECTED';
+                                  const prevDone = idx === 0 || steps[idx - 1].status === 'EMAIL_SENT' || steps[idx - 1].status === 'REFLECTED';
+
+                                  return (
+                                    <div key={step.id} className={`p-3 rounded-lg border text-left ${
+                                      isReflected ? 'bg-emerald-500/5 border-emerald-500/20' :
+                                      isSent ? 'bg-amber-500/5 border-amber-500/20' :
+                                      prevDone ? 'bg-neutral-900/40 border-white/5' :
+                                      'bg-neutral-950 border-white/5 opacity-40'
+                                    }`}>
+                                      <div className="flex items-start justify-between gap-4">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-mono font-bold shrink-0 ${
+                                              isReflected ? 'bg-emerald-500 text-black' :
+                                              isSent ? 'bg-amber-500 text-black' :
+                                              'bg-gray-700 text-gray-400'
+                                            }`}>
+                                              {isReflected ? '✓' : isSent ? '✉' : step.step + 1}
+                                            </span>
+                                            <span className={`font-bold text-xs font-mono uppercase ${
+                                              isReflected ? 'text-emerald-400' :
+                                              isSent ? 'text-amber-400' :
+                                              'text-white'
+                                            }`}>{step.label}</span>
+                                            <span className="text-[8px] font-mono text-gray-600">({step.delay})</span>
+                                          </div>
+                                          <p className="text-[10px] text-gray-500 mt-1 ml-7">{step.description}</p>
+                                          {isSent && step.sentAt && (
+                                            <p className="text-[8px] font-mono text-gray-600 mt-1 ml-7">Sent: {new Date(step.sentAt).toLocaleString()}</p>
+                                          )}
+                                        </div>
+
+                                        <div className="flex gap-1.5 shrink-0">
+                                          {isActive && prevDone && (
+                                            <button
+                                              onClick={async () => {
+                                                setSendingStepEmail(step.id);
+                                                const result = await onSendTimelineEmail?.(selected.email, step.id);
+                                                setSendingStepEmail(null);
+                                                if (result?.success) onShowToast(`Email sent: ${step.label}`, 'success');
+                                                else onShowToast(result?.error || 'Failed', 'error');
+                                              }}
+                                              disabled={sendingStepEmail === step.id}
+                                              className="py-1 px-2 bg-red-500 hover:bg-red-400 text-black font-bold font-mono text-[8px] rounded uppercase cursor-pointer disabled:opacity-50"
+                                            >
+                                              {sendingStepEmail === step.id ? '...' : 'Send Email'}
+                                            </button>
+                                          )}
+                                          {isSent && !isReflected && (
+                                            <button
+                                              onClick={() => {
+                                                onReflectTimelineStep?.(selected.email, step.id);
+                                                onShowToast(`Reflected: ${step.label}. Student dashboard will now show this section.`, 'success');
+                                              }}
+                                              className="py-1 px-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-mono text-[8px] rounded uppercase cursor-pointer"
+                                            >
+                                              Mark Reflected
+                                            </button>
+                                          )}
+                                          {isReflected && (
+                                            <span className="py-1 px-2 bg-emerald-500/10 text-emerald-400 font-mono text-[8px] rounded uppercase">Done</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

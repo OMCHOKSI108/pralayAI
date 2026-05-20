@@ -18,6 +18,8 @@ import {
 import { printProjectDefinition, printCertificate, printOfferLetter, printWeeklyReport } from '@/utils/printHelper';
 import HellwareLogo from '@/components/HellwareLogo';
 import { uploadBackendPaymentProof } from '@/lib/backend';
+import type { TimelineStep } from '@/app/page';
+import { DEFAULT_TIMELINE } from '@/app/page';
 
 interface StudentDashboardProps {
   userEmail: string;
@@ -31,24 +33,49 @@ interface StudentDashboardProps {
   onShowToast: (msg: string, type: 'success' | 'warn' | 'error') => void;
   studentStage: string;
   onUpdateStage: (stage: string) => void;
+  timeline: TimelineStep[];
 }
 
 export default function StudentDashboard({
   userEmail, onLogout, onNavigateToPublic,
   assignedProject, submissions, onCommitSubmission, onToggleMilestone, onShowToast,
-  studentStage, onUpdateStage
+  studentStage, onUpdateStage, timeline
 }: StudentDashboardProps) {
 
   // Active dashboard tab state
   const [activeTab, setActiveTab] = useState<'HOME' | 'OFFER_LETTER' | 'PROJECT' | 'WEEKLY_REPORTS' | 'SUBMIT' | 'HISTORY' | 'RESOURCES' | 'BADGES' | 'REFERRAL' | 'CONTRIBUTION' | 'SETTINGS' | 'APPLY_MORE'>('HOME');
 
-  const certificationVisible = studentStage === 'CERTIFICATION_READY' || studentStage === 'PAYMENT_SUBMITTED' || studentStage === 'PAYMENT_VERIFIED' || studentStage === 'CERTIFICATE_ISSUED';
-  const badgesVisible = studentStage === 'INTERNSHIP' || studentStage === 'COMPLETED' || certificationVisible;
+  const timelineSteps = timeline.length > 0 ? timeline : DEFAULT_TIMELINE;
+
+  function isTabUnlocked(tabId: string): boolean {
+    const alwaysVisible = ['HOME', 'SETTINGS', 'REFERRAL', 'APPLY_MORE'];
+    if (alwaysVisible.includes(tabId)) return true;
+
+    const tabStepMap: Record<string, string> = {
+      'OFFER_LETTER': 'congrats',
+      'PROJECT': 'task_details',
+      'WEEKLY_REPORTS': 'weekly_report',
+      'SUBMIT': 'final_submission',
+      'HISTORY': 'final_submission',
+      'RESOURCES': 'task_details',
+      'BADGES': 'payment_verified',
+      'CONTRIBUTION': 'submission_approved',
+    };
+
+    const requiredStep = tabStepMap[tabId];
+    if (!requiredStep) return true;
+
+    const step = timelineSteps.find(s => s.id === requiredStep);
+    return step?.status === 'REFLECTED';
+  }
+
+  const certificationVisible = isTabUnlocked('CONTRIBUTION');
+  const badgesVisible = isTabUnlocked('BADGES');
 
   useEffect(() => {
     if (activeTab === 'CONTRIBUTION' && !certificationVisible) setActiveTab('HOME');
     if (activeTab === 'BADGES' && !badgesVisible) setActiveTab('HOME');
-  }, [studentStage]);
+  }, [studentStage, timeline]);
 
   // Active internships list for the student
   const [activeInternships, setActiveInternships] = useState<StudentProject[]>([
@@ -118,6 +145,9 @@ export default function StudentDashboard({
   const [isCertificateAddedInWebsite, setIsCertificateAddedInWebsite] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [localMockApproved, setLocalMockApproved] = useState(false);
+  const [utrNumber, setUtrNumber] = useState('');
+  const [cryptoTxHash, setCryptoTxHash] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'CRYPTO' | null>(null);
 
   // Offer letter choice states
   const [offerDuration, setOfferDuration] = useState<number>(3);
@@ -150,6 +180,19 @@ export default function StudentDashboard({
   ]);
 
   const handlePaymentScreenshotUpload = async (file: File) => {
+    if (!paymentMethod) {
+      onShowToast('Select a payment method (UPI or Crypto) and fill the details first.', 'warn');
+      return;
+    }
+    if (paymentMethod === 'UPI' && !utrNumber.trim()) {
+      onShowToast('Enter the UTR number from your UPI payment.', 'warn');
+      return;
+    }
+    if (paymentMethod === 'CRYPTO' && !cryptoTxHash.trim()) {
+      onShowToast('Enter the transaction hash from your crypto payment.', 'warn');
+      return;
+    }
+
     const studentId = window.localStorage.getItem('hellwareStudentId');
     if (!studentId) {
       onShowToast('Apply first so the backend can create your student record before payment upload.', 'warn');
@@ -160,6 +203,8 @@ export default function StudentDashboard({
     setPaymentStatus('VALIDATING');
     setDidContribute(true);
 
+    const txRef = paymentMethod === 'UPI' ? utrNumber.trim() : cryptoTxHash.trim();
+
     try {
       const cleanEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '').slice(0, 24) || 'student';
       const result = await uploadBackendPaymentProof({
@@ -169,6 +214,7 @@ export default function StudentDashboard({
         screenshot: file
       });
       window.localStorage.setItem('hellwarePaymentId', result.paymentId);
+      onUpdateStage('PAYMENT_SUBMITTED');
       onShowToast(`Receipt uploaded to backend audit queue: ${file.name}`, 'success');
     } catch (error) {
       setPaymentStatus('PENDING');
@@ -320,19 +366,15 @@ export default function StudentDashboard({
             {[
               { id: 'HOME', label: 'DASHBOARD HOME', icon: <LayoutGrid className="w-4 h-4" /> },
               { id: 'APPLY_MORE', label: '+ APPLY INTERNSHIPS', icon: <Award className="w-4 h-4 text-rose-500" /> },
-              { id: 'OFFER_LETTER', label: 'INTERNSHIP OFFER', icon: <FileText className="w-4 h-4" /> },
-              { id: 'PROJECT', label: 'ASSIGNED PROJECT', icon: <Code className="w-4 h-4" /> },
-              { id: 'WEEKLY_REPORTS', label: 'WEEKLY REPORTS', icon: <CheckSquare className="w-4 h-4" /> },
-              { id: 'SUBMIT', label: 'SUBMIT WORK', icon: <Send className="w-4 h-4" /> },
-              { id: 'HISTORY', label: 'PAST SUBMISSIONS', icon: <FileText className="w-4 h-4" /> },
-              { id: 'RESOURCES', label: 'SYLLABUS RESOURCES', icon: <BookOpen className="w-4 h-4" /> },
-              ...(studentStage === 'INTERNSHIP' || studentStage === 'COMPLETED' || studentStage === 'CERTIFICATION_READY' || studentStage === 'PAYMENT_SUBMITTED' || studentStage === 'PAYMENT_VERIFIED' || studentStage === 'CERTIFICATE_ISSUED' ? [{
-                id: 'BADGES' as const, label: isCertificateAddedInWebsite ? 'BADGES & CERTIFICATE' : 'COHORT BADGES', icon: <Award className="w-4 h-4" />
-              }] : []),
+              ...(isTabUnlocked('OFFER_LETTER') ? [{ id: 'OFFER_LETTER' as const, label: 'INTERNSHIP OFFER', icon: <FileText className="w-4 h-4" /> }] : []),
+              ...(isTabUnlocked('PROJECT') ? [{ id: 'PROJECT' as const, label: 'ASSIGNED PROJECT', icon: <Code className="w-4 h-4" /> }] : []),
+              ...(isTabUnlocked('WEEKLY_REPORTS') ? [{ id: 'WEEKLY_REPORTS' as const, label: 'WEEKLY REPORTS', icon: <CheckSquare className="w-4 h-4" /> }] : []),
+              ...(isTabUnlocked('SUBMIT') ? [{ id: 'SUBMIT' as const, label: 'SUBMIT WORK', icon: <Send className="w-4 h-4" /> }] : []),
+              ...(isTabUnlocked('HISTORY') ? [{ id: 'HISTORY' as const, label: 'PAST SUBMISSIONS', icon: <FileText className="w-4 h-4" /> }] : []),
+              ...(isTabUnlocked('RESOURCES') ? [{ id: 'RESOURCES' as const, label: 'SYLLABUS RESOURCES', icon: <BookOpen className="w-4 h-4" /> }] : []),
+              ...(isTabUnlocked('BADGES') ? [{ id: 'BADGES' as const, label: isCertificateAddedInWebsite ? 'BADGES & CERTIFICATE' : 'COHORT BADGES', icon: <Award className="w-4 h-4" /> }] : []),
               { id: 'REFERRAL', label: 'REFERRALS HUB', icon: <Link className="w-4 h-4" /> },
-              ...(studentStage === 'CERTIFICATION_READY' || studentStage === 'PAYMENT_SUBMITTED' || studentStage === 'PAYMENT_VERIFIED' || studentStage === 'CERTIFICATE_ISSUED' ? [{
-                id: 'CONTRIBUTION' as const, label: 'CERTIFICATE PAYMENT', icon: <Info className="w-4 h-4" />
-              }] : []),
+              ...(isTabUnlocked('CONTRIBUTION') ? [{ id: 'CONTRIBUTION' as const, label: 'CERTIFICATE PAYMENT', icon: <Info className="w-4 h-4" /> }] : []),
               { id: 'SETTINGS', label: 'PORTAL SETTINGS', icon: <Settings className="w-4 h-4" /> },
             ].filter(Boolean).map((lnk) => {
               const isActive = activeTab === lnk.id;
@@ -1577,16 +1619,27 @@ export default function StudentDashboard({
                 <div className="max-w-3xl mx-auto p-1 bg-neutral-900 rounded-xl relative overflow-hidden border border-white/5">
                   <div className="bg-neutral-950 p-8 text-center space-y-6 relative overflow-hidden">
                     
-                    {/* Locked state if not added in website */}
-                    {!isCertificateAddedInWebsite && (
+                    {/* Locked state if not yet issued */}
+                    {studentStage !== 'CERTIFICATE_ISSUED' && (
                       <div className="absolute inset-0 bg-black/92 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 text-center space-y-4">
-                        {paymentStatus === 'PENDING' ? (
+                        {studentStage === 'APPLIED' || studentStage === 'ONBOARDED' || studentStage === 'INTERNSHIP' || studentStage === 'COMPLETED' ? (
                           <>
                             <Lock className="w-10 h-10 text-red-500 animate-pulse" />
                             <div className="space-y-1">
-                              <h4 className="font-bold text-white tracking-widest uppercase text-sm font-mono">// PORTAL_DATABASE_LOCKED</h4>
+                              <h4 className="font-bold text-white tracking-widest uppercase text-sm font-mono">// STAGE_LOCKED</h4>
                               <p className="text-[11px] text-gray-400 max-w-sm mx-auto leading-relaxed">
-                                Certificate is not loaded. Submit your code and upload a payment receipt screenshot under the <strong>"CERTIFICATE PAYMENT"</strong> tab to start transaction verification.
+                                Complete your internship milestones and submit your work first. The certificate will become available after admin review.
+                              </p>
+                              <span className="text-[9px] font-mono text-amber-500 block uppercase">Stage: {studentStage}</span>
+                            </div>
+                          </>
+                        ) : studentStage === 'CERTIFICATION_READY' ? (
+                          <>
+                            <Lock className="w-10 h-10 text-amber-500 animate-pulse" />
+                            <div className="space-y-1">
+                              <h4 className="font-bold text-amber-500 tracking-widest uppercase text-sm font-mono">// PAYMENT_REQUIRED</h4>
+                              <p className="text-[11px] text-gray-400 max-w-sm mx-auto leading-relaxed">
+                                Your internship is complete! Submit your payment via UPI or Crypto under the <strong>"CERTIFICATE PAYMENT"</strong> tab to unlock your certificate.
                               </p>
                               <button 
                                 onClick={() => setActiveTab('CONTRIBUTION')}
@@ -1596,19 +1649,19 @@ export default function StudentDashboard({
                               </button>
                             </div>
                           </>
-                        ) : paymentStatus === 'VALIDATING' ? (
+                        ) : studentStage === 'PAYMENT_SUBMITTED' ? (
                           <>
                             <RefreshCw className="w-10 h-10 text-amber-500 animate-spin" />
                             <div className="space-y-1">
                               <h4 className="font-bold text-amber-500 tracking-widest uppercase text-sm font-mono">// VALIDATING_PHASE_ACTIVE</h4>
                               <p className="text-[11px] text-gray-400 max-w-sm mx-auto leading-relaxed">
-                                Our accounts audit team is currently checking your uploaded transaction screenshot to verify its authenticity.
+                                Our accounts audit team is currently checking your uploaded payment proof to verify its authenticity.
                               </p>
                               <div className="text-[10px] text-gray-500 font-mono mt-3 uppercase p-2 border border-white/5 bg-black rounded">
                                 Status: ⏳ MANUAL_AUDITING_RECEIPT
                               </div>
                               <p className="text-[10px] text-[#E94560] font-light max-w-xs mt-2 italic leading-tight mx-auto">
-                                Once verified as genuine, we will reach out and dispatch your certificate to your email, and after some days we update this website to add your certificate here!
+                                Once verified as genuine, we will reach out and dispatch your certificate to your email.
                               </p>
                             </div>
                           </>
@@ -1618,13 +1671,13 @@ export default function StudentDashboard({
                             <div className="space-y-1">
                               <h4 className="font-bold text-emerald-400 tracking-widest uppercase text-sm font-mono">// VERIFIED_AND_MAILED</h4>
                               <p className="text-[11px] text-gray-400 max-w-sm mx-auto leading-relaxed">
-                                Transaction approved! Your physical/PDF certificate has been dispatched and sent to your email manually.
+                                Payment approved! Your certificate is being prepared. The admin will update your account to issue the certificate shortly (~1 day).
                               </p>
                               <p className="text-[10px] text-amber-400 font-mono mt-3 uppercase">
-                                ⏳ WEB REPOSITORY BACKEND SYNC QUEUED
+                                ⏳ CERTIFICATE ISSUANCE PENDING
                               </p>
                               <p className="text-[10px] text-gray-400 max-w-xs mt-1 font-light mx-auto">
-                                Within a few days, the backend database will update and add your certificate directly to this page so you can print or download it live.
+                                Once the admin sets your stage to CERTIFICATE_ISSUED, you can download your certificate below.
                               </p>
                             </div>
                           </>
@@ -1674,15 +1727,21 @@ export default function StudentDashboard({
                       </div>
                     </div>
 
-                    <button 
-                      onClick={() => {
-                        printCertificate(REQ_CERTIFICATE, "Alex Mercer");
-                        onShowToast('Pristine Certificate PDF compilation initiated successfully.', 'success');
-                      }}
-                      className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs tracking-widest uppercase rounded flex items-center justify-center gap-2 cursor-pointer transition-colors"
-                    >
-                      <Download className="w-4 h-4 text-black" /> Dispatch Verified PDF Certificate
-                    </button>
+                    {studentStage === 'CERTIFICATE_ISSUED' ? (
+                      <button 
+                        onClick={() => {
+                          printCertificate(REQ_CERTIFICATE, "Alex Mercer");
+                          onShowToast('Pristine Certificate PDF compilation initiated successfully.', 'success');
+                        }}
+                        className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs tracking-widest uppercase rounded flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-black" /> Dispatch Verified PDF Certificate
+                      </button>
+                    ) : (
+                      <div className="w-full py-2.5 bg-neutral-900 border border-white/5 text-gray-500 text-xs tracking-widest uppercase rounded flex items-center justify-center gap-2 cursor-not-allowed">
+                        <Lock className="w-4 h-4" /> Certificate Locked — Wait for Admin to Issue
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1917,43 +1976,89 @@ export default function StudentDashboard({
                     </p>
                   </div>
 
-                  {/* Payment Options Area */}
-                  <div className="bg-black/50 p-4 border border-white/5 rounded-lg grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2.5">
-                      <span className="text-[8.5px] font-mono text-gray-500 block uppercase font-bold">// SECURE SANDBOX LINK</span>
-                      <p className="text-[10.5px] text-gray-400">Clicking below opens the simulated secure Razorpay contribution terminal for INR 149 operables.</p>
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          setDidContribute(true);
-                          onShowToast('Razorpay Sandbox Payment Authorized. (INR 149 contribution completed)', 'success');
-                        }}
-                        className={`w-full py-2 ${didContribute ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-red-500 hover:bg-red-400 text-white'} text-[11px] font-mono font-bold uppercase tracking-widest text-center cursor-pointer`}
+                  {/* Payment Method Selection + Details */}
+                  <div className="bg-black/50 p-4 border border-white/5 rounded-lg space-y-5">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setPaymentMethod('UPI'); setCryptoTxHash(''); }}
+                        className={`flex-1 py-2 text-[11px] font-mono font-bold uppercase tracking-widest text-center cursor-pointer border ${
+                          paymentMethod === 'UPI'
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                            : 'bg-neutral-900 border-white/5 text-gray-400 hover:text-white'
+                        }`}
                       >
-                        {didContribute ? '✓ PAID ₹149 VIA SANDBOX' : 'Pay Operational ₹149'}
+                        UPI PAYMENT
+                      </button>
+                      <button
+                        onClick={() => { setPaymentMethod('CRYPTO'); setUtrNumber(''); }}
+                        className={`flex-1 py-2 text-[11px] font-mono font-bold uppercase tracking-widest text-center cursor-pointer border ${
+                          paymentMethod === 'CRYPTO'
+                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                            : 'bg-neutral-900 border-white/5 text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        CRYPTO PAYMENT
                       </button>
                     </div>
 
-                    <div className="border-t sm:border-t-0 sm:border-l border-white/5 pt-3 sm:pt-0 sm:pl-4 flex flex-col justify-between">
-                      <div>
-                        <span className="text-[8.5px] font-mono text-gray-500 block uppercase font-bold">// DIRECT UPI QR DEPOSIT</span>
-                        <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">For direct bank transfer, route to UPI address: <span className="text-white font-bold">hellware@ybl</span></p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-2 bg-neutral-900/60 p-2 border border-white/5 rounded">
-                        <div className="w-8 h-8 bg-white p-0.5 rounded flex items-center justify-center">
-                          {/* QR Mock code representation */}
-                          <div className="grid grid-cols-4 gap-0.5 w-full h-full bg-black">
-                            <span className="bg-white"></span><span className="bg-black"></span><span className="bg-white"></span><span className="bg-black"></span>
-                            <span className="bg-black"></span><span className="bg-white"></span><span className="bg-black"></span><span className="bg-white"></span>
-                            <span className="bg-white"></span><span className="bg-black"></span><span className="bg-white font-bold"></span><span className="bg-black"></span>
-                            <span className="bg-white"></span><span className="bg-white"></span><span className="bg-black"></span><span className="bg-white"></span>
+                    {paymentMethod === 'UPI' && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-4 p-3 bg-neutral-900/60 border border-white/5 rounded">
+                          <div className="w-20 h-20 bg-white p-1 rounded flex items-center justify-center shrink-0">
+                            <div className="grid grid-cols-6 gap-0.5 w-full h-full bg-black">
+                              {Array.from({ length: 36 }).map((_, i) => (
+                                <span key={i} className={`${Math.random() > 0.5 ? 'bg-white' : 'bg-black'}`} />
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[9px] font-mono text-gray-500 block uppercase">Scan with any UPI app</span>
+                            <span className="text-white font-bold text-sm font-mono">hellware@ybl</span>
+                            <span className="text-[9px] font-mono text-gray-500 block uppercase">₹149 — REF: HW_VERIFY_UPI</span>
                           </div>
                         </div>
-                        <div className="text-[9px] font-mono text-gray-400">
-                          <span>Ref: HW_VERIFY_LEDGER</span>
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-mono text-gray-500 uppercase block">Enter UTR Number After Payment</label>
+                          <input
+                            type="text"
+                            value={utrNumber}
+                            onChange={(e) => setUtrNumber(e.target.value)}
+                            placeholder="e.g. UTR123456789"
+                            className="w-full bg-black border border-white/10 px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-red-500"
+                          />
                         </div>
                       </div>
-                    </div>
+                    )}
+
+                    {paymentMethod === 'CRYPTO' && (
+                      <div className="space-y-4">
+                        <div className="p-3 bg-neutral-900/60 border border-white/5 rounded space-y-2">
+                          <span className="text-[9px] font-mono text-gray-500 block uppercase">Send USDT (BEP20/ERC20) to:</span>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 text-[10px] font-mono text-white bg-black/60 px-2 py-1.5 rounded border border-white/5 truncate">
+                              0x742d35Cc6634C0532925a3b844Bc4a9f8bD9a5c7
+                            </code>
+                            <button
+                              onClick={() => { navigator.clipboard.writeText('0x742d35Cc6634C0532925a3b844Bc4a9f8bD9a5c7'); onShowToast('Address copied!', 'success'); }}
+                              className="py-1.5 px-2 bg-neutral-800 hover:bg-neutral-700 text-[9px] font-mono border border-white/5 rounded cursor-pointer text-gray-300"
+                            >
+                              COPY
+                            </button>
+                          </div>
+                          <span className="text-[9px] font-mono text-gray-600 block">Amount: ~$2 USDT (₹149 equivalent)</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-mono text-gray-500 uppercase block">Enter Transaction Hash</label>
+                          <input
+                            type="text"
+                            value={cryptoTxHash}
+                            onChange={(e) => setCryptoTxHash(e.target.value)}
+                            placeholder="0x..."
+                            className="w-full bg-black border border-white/10 px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-red-500"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* SCREENSHOT UPLOADER */}
@@ -1964,24 +2069,29 @@ export default function StudentDashboard({
                     </div>
 
                     {paymentScreenshotUploaded ? (
-                      <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                          <div className="text-left font-mono">
-                            <span className="text-xs text-white block truncate uppercase font-bold">Screenshot Uploaded: {paymentScreenshotUploaded}</span>
-                            <span className="text-[9px] text-gray-400 block">Awaiting manual accounting office auditing validation checks.</span>
+                      <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                            <div className="text-left font-mono">
+                              <span className="text-xs text-white block truncate uppercase font-bold">Screenshot Uploaded: {paymentScreenshotUploaded}</span>
+                              <span className="text-[9px] text-gray-400 block">Awaiting manual accounting office auditing validation checks.</span>
+                            </div>
                           </div>
+                          <button 
+                            onClick={() => {
+                              setPaymentScreenshotUploaded(null);
+                              setPaymentStatus('PENDING');
+                              onShowToast('Removed transaction receipt screenshot.', 'warn');
+                            }}
+                            className="p-1 hover:bg-white/10 rounded text-gray-500 hover:text-white font-mono text-[9px] uppercase cursor-pointer"
+                          >
+                            Change file
+                          </button>
                         </div>
-                        <button 
-                          onClick={() => {
-                            setPaymentScreenshotUploaded(null);
-                            setPaymentStatus('PENDING');
-                            onShowToast('Removed transaction receipt screenshot.', 'warn');
-                          }}
-                          className="p-1 hover:bg-white/10 rounded text-gray-500 hover:text-white font-mono text-[9px] uppercase cursor-pointer"
-                        >
-                          Change file
-                        </button>
+                        <div className="mt-2 text-[9px] font-mono text-gray-500 bg-black/40 p-2 rounded border border-white/5">
+                          Method: {paymentMethod} | Ref: {paymentMethod === 'UPI' ? `UTR: ${utrNumber}` : `TxHash: ${cryptoTxHash.slice(0, 20)}...`} | Amount: ₹149
+                        </div>
                       </div>
                     ) : (
                       <div className="border border-spaced border-white/10 bg-black/40 hover:bg-neutral-900/20 p-6 rounded-lg text-center space-y-3 transition-colors relative cursor-pointer">
@@ -2105,6 +2215,7 @@ export default function StudentDashboard({
                           setPaymentScreenshotUploaded('receipt_reference_92023.png');
                           setPaymentStatus('VALIDATING');
                           setDidContribute(true);
+                          onUpdateStage('PAYMENT_SUBMITTED');
                           onShowToast('Action simulated: Screenshot attached. Validating phase started.', 'success');
                         }}
                         className="py-1 px-1 bg-neutral-900 hover:bg-neutral-800 text-white border border-white/5 font-mono text-[8px] rounded uppercase cursor-pointer truncate"
@@ -2120,6 +2231,7 @@ export default function StudentDashboard({
                             return;
                           }
                           setPaymentStatus('APPROVED');
+                          onUpdateStage('PAYMENT_VERIFIED');
                           onShowToast('Manual Check: Approved! Custom outreach mail sent to candidate containing Certificate.', 'success');
                         }}
                         className="py-1 px-1 bg-amber-500 hover:bg-amber-400 text-black font-semibold font-mono text-[8px] rounded uppercase cursor-pointer truncate"
@@ -2135,11 +2247,12 @@ export default function StudentDashboard({
                             return;
                           }
                           setIsCertificateAddedInWebsite(true);
+                          onUpdateStage('CERTIFICATE_ISSUED');
                           onShowToast('Database Updated: Certificate successfully added to website! Unlocking BADGES tab.', 'success');
                         }}
                         className="py-1 px-1 bg-blue-500 hover:bg-blue-400 text-white font-mono text-[8px] rounded uppercase cursor-pointer truncate"
                       >
-                        3. Add Cert to Website
+                        3. Issue Certificate
                       </button>
 
                       <button 
@@ -2149,6 +2262,10 @@ export default function StudentDashboard({
                           setPaymentStatus('PENDING');
                           setIsCertificateAddedInWebsite(false);
                           setDidContribute(false);
+                          setUtrNumber('');
+                          setCryptoTxHash('');
+                          setPaymentMethod(null);
+                          onUpdateStage('INTERNSHIP');
                           onShowToast('Simulator state reset.', 'warn');
                         }}
                         className="py-1 px-1 bg-neutral-950 border border-red-500/20 text-red-400 font-mono text-[8px] rounded uppercase cursor-pointer truncate"

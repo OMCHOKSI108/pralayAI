@@ -21,6 +21,29 @@ import { getBackendMetrics, getBackendApplications, updateBackendApplication, ge
 
 export type StudentStage = 'APPLIED' | 'ONBOARDED' | 'INTERNSHIP' | 'COMPLETED' | 'CERTIFICATION_READY' | 'PAYMENT_SUBMITTED' | 'PAYMENT_VERIFIED' | 'CERTIFICATE_ISSUED';
 
+export interface TimelineStep {
+  id: string;
+  step: number;
+  label: string;
+  description: string;
+  emailType: string;
+  delay: string;
+  unlockTab: string;
+  status: 'PENDING' | 'EMAIL_SENT' | 'REFLECTED';
+  sentAt?: string;
+}
+
+export const DEFAULT_TIMELINE: TimelineStep[] = [
+  { id: 'received', step: 0, label: 'Application Received', description: 'Send confirmation that application was received', emailType: 'application_received', delay: '0', unlockTab: '', status: 'PENDING' },
+  { id: 'congrats', step: 1, label: 'Congratulations + Offer Letter', description: 'Send selected email with ID/pass and Offer Letter PDF', emailType: 'congrats_offer', delay: '1 day', unlockTab: 'OFFER_LETTER', status: 'PENDING' },
+  { id: 'task_details', step: 2, label: 'Task Details Assigned', description: 'Send email with task/project details and deadlines', emailType: 'task_details', delay: '2 hours after previous', unlockTab: 'PROJECT', status: 'PENDING' },
+  { id: 'weekly_report', step: 3, label: 'Weekly Report Request', description: 'Send prompt asking for weekly report submission', emailType: 'weekly_report', delay: '1 week', unlockTab: 'WEEKLY_REPORTS', status: 'PENDING' },
+  { id: 'final_submission', step: 4, label: 'Final Submission Request', description: 'Send request for final project submission with links', emailType: 'final_submission', delay: 'After 4 weeks', unlockTab: 'SUBMIT', status: 'PENDING' },
+  { id: 'submission_approved', step: 5, label: 'Submission Approved', description: 'Send confirmation that submission passed review', emailType: 'submission_approved', delay: '1 day after submission', unlockTab: 'CONTRIBUTION', status: 'PENDING' },
+  { id: 'payment_verified', step: 6, label: 'Payment Verified', description: 'Send confirmation that payment was verified, certificate coming', emailType: 'payment_verified', delay: '1 day after payment', unlockTab: 'BADGES', status: 'PENDING' },
+  { id: 'certificate_issued', step: 7, label: 'Certificate Issued', description: 'Send email that certificate is ready to download', emailType: 'certificate_ready', delay: '1-2 days after verified', unlockTab: 'CERTIFICATE', status: 'PENDING' },
+];
+
 export default function Home() {
   const [loading, setLoading] = useState(true);
 
@@ -85,6 +108,95 @@ export default function Home() {
       return next;
     });
   };
+
+  const [timelines, setTimelines] = useState<Record<string, TimelineStep[]>>(() => {
+    try {
+      const saved = localStorage.getItem('hellware_timelines');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  const getStudentTimeline = useCallback((email: string): TimelineStep[] => {
+    if (!timelines[email]) return DEFAULT_TIMELINE.map(s => ({ ...s }));
+    return timelines[email];
+  }, [timelines]);
+
+  const handleSendTimelineEmail = useCallback(async (email: string, stepId: string) => {
+    const currentSteps = timelines[email] || DEFAULT_TIMELINE.map(s => ({ ...s }));
+    const step = currentSteps.find(s => s.id === stepId);
+    if (!step || step.status !== 'PENDING') return { success: false, error: 'Step already completed' };
+
+    const studentName = simState.fullName;
+    const studentEmail = email;
+
+    try {
+      const groqRes = await fetch('/api/llm/generate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentName,
+          studentEmail,
+          internshipDomain: 'Cyber Security',
+          emailType: step.emailType,
+        }),
+      });
+      const groqData = await groqRes.json();
+      const emailContent = groqData.success ? groqData.data.emailContent : `Hello ${studentName}, this is regarding your internship at Hellware. (Automated step: ${step.label})`;
+
+      const emailRes = await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: studentEmail,
+          subject: `Hellware Internship: ${step.label}`,
+          html: emailContent.replace(/\n/g, '<br/>'),
+        }),
+      });
+      const emailData = await emailRes.json();
+
+      if (emailData.success) {
+        const updatedSteps = currentSteps.map(s =>
+          s.id === stepId ? { ...s, status: 'EMAIL_SENT' as const, sentAt: new Date().toISOString() } : s
+        );
+        setTimelines(prev => {
+          const next = { ...prev, [email]: updatedSteps };
+          localStorage.setItem('hellware_timelines', JSON.stringify(next));
+          return next;
+        });
+        handleUpdateStudentStage(email, stageForStep(stepId));
+        return { success: true };
+      }
+      return { success: false, error: 'Email send failed' };
+    } catch {
+      return { success: false, error: 'Failed to send email' };
+    }
+  }, [timelines, simState.fullName]);
+
+  const handleReflectTimelineStep = useCallback((email: string, stepId: string) => {
+    const currentSteps = timelines[email] || DEFAULT_TIMELINE.map(s => ({ ...s }));
+    const updatedSteps = currentSteps.map(s =>
+      s.id === stepId && s.status === 'EMAIL_SENT' ? { ...s, status: 'REFLECTED' as const } : s
+    );
+    setTimelines(prev => {
+      const next = { ...prev, [email]: updatedSteps };
+      localStorage.setItem('hellware_timelines', JSON.stringify(next));
+      return next;
+    });
+  }, [timelines]);
+
+  function stageForStep(stepId: string): StudentStage {
+    const map: Record<string, StudentStage> = {
+      received: 'APPLIED',
+      congrats: 'ONBOARDED',
+      task_details: 'INTERNSHIP',
+      weekly_report: 'COMPLETED',
+      final_submission: 'COMPLETED',
+      submission_approved: 'CERTIFICATION_READY',
+      payment_verified: 'PAYMENT_VERIFIED',
+      certificate_issued: 'CERTIFICATE_ISSUED',
+    };
+    return map[stepId] || 'APPLIED';
+  }
 
   const fetchBackendData = useCallback(async (token: string) => {
     try {
@@ -265,6 +377,8 @@ export default function Home() {
     showToast('Secure terminal logout performed active status.', 'warn');
   };
 
+  const currentTimeline = getStudentTimeline(userEmail);
+
   const showNavbarAndFooter = !['STUDENT_DASHBOARD', 'ADMIN_DASHBOARD'].includes(currentView);
 
   return (
@@ -350,6 +464,7 @@ export default function Home() {
                 onShowToast={showToast}
                 studentStage={studentStages[userEmail] || 'APPLIED'}
                 onUpdateStage={(s) => handleUpdateStudentStage(userEmail, s)}
+                timeline={currentTimeline}
               />
             )}
 
@@ -378,6 +493,10 @@ export default function Home() {
                 onBackendVerifyPayment={handleBackendVerifyPayment}
                 studentStages={studentStages}
                 onUpdateStudentStage={handleUpdateStudentStage}
+                timelines={timelines}
+                onSendTimelineEmail={handleSendTimelineEmail}
+                onReflectTimelineStep={handleReflectTimelineStep}
+                getStudentTimeline={getStudentTimeline}
               />
             )}
 
