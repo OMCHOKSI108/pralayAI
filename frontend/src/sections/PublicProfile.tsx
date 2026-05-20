@@ -11,6 +11,9 @@ import {
 import { GitHubIcon, LinkedinIcon } from '@/components/SocialIcons';
 import { REQ_CERTIFICATE, INITIAL_PROJECTS, REQ_BADGES } from '@/data/mockData';
 
+function Github({ className }: { className?: string }) { return <GitHubIcon className={className} />; }
+function Linkedin({ className }: { className?: string }) { return <LinkedinIcon className={className} />; }
+
 interface PublicProfileProps {
   username?: string;
   onNavigateHome: () => void;
@@ -77,11 +80,11 @@ export default function PublicProfile({
 
           {/* Social icons */}
           <div className="flex items-center gap-3 justify-center md:justify-start pt-2">
-            <a href="https://GitHub.com/alex-mercer" target="_blank" rel="noreferrer" className="p-2 bg-neutral-900 border border-white/10 hover:border-white/30 rounded text-gray-400 hover:text-white transition-all">
-              <GitHubIcon className="w-4 h-4" />
+            <a href="https://github.com/alex-mercer" target="_blank" rel="noreferrer" className="p-2 bg-neutral-900 border border-white/10 hover:border-white/30 rounded text-gray-400 hover:text-white transition-all">
+              <Github className="w-4 h-4" />
             </a>
             <a href="https://linkedin.com/in/alex-mercer" target="_blank" rel="noreferrer" className="p-2 bg-neutral-900 border border-white/10 hover:border-white/30 rounded text-gray-400 hover:text-white transition-all">
-              <LinkedinIcon className="w-4 h-4" />
+              <Linkedin className="w-4 h-4" />
             </a>
           </div>
         </div>

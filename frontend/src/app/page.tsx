@@ -11,6 +11,7 @@ import AuthPages from '@/sections/AuthPages';
 import StudentDashboard from '@/sections/StudentDashboard';
 import AdminDashboard from '@/sections/AdminDashboard';
 import PublicProfile from '@/sections/PublicProfile';
+import SimulatorConsole from '@/components/SimulatorConsole';
 import { 
   INITIAL_PROJECTS, INITIAL_APPLICATIONS, INITIAL_SUBMISSIONS, 
   INITIAL_RESOURCES, INITIAL_AUDIT_LOGS, StudentApplication, 
@@ -19,6 +20,21 @@ import {
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
+
+  const [simState, setSimState] = useState({
+    day: 0,
+    step: 'UNREGISTERED',
+    fullName: 'Alex Mercer',
+    email: 'omchoksi99@gmail.com',
+    college: 'IIIT Hyderabad',
+    phone: '+91 98765 43210',
+    gradYear: '2027',
+    role: 'Cybersecurity',
+    skills: ['React', 'TypeScript', 'Docker', 'Go'],
+    referralsCount: 0,
+    refMoney: 0
+  });
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<'student' | 'admin' | null>(null);
   const [userEmail, setUserEmail] = useState('omchoksi99@gmail.com');
@@ -221,6 +237,8 @@ export default function Home() {
                 onNavigate={setCurrentView}
                 onSubmitApplication={handleAddNewApplication}
                 onShowToast={showToast}
+                simState={simState}
+                setSimState={setSimState}
               />
             )}
 
@@ -230,6 +248,7 @@ export default function Home() {
                 onNavigate={setCurrentView}
                 onLoginSuccess={handleLoginSuccess}
                 onShowToast={showToast}
+                simState={simState}
               />
             )}
 
@@ -278,6 +297,20 @@ export default function Home() {
           )}
         </>
       )}
+
+      <SimulatorConsole 
+        simState={simState}
+        setSimState={setSimState}
+        onLoginSuccess={(role) => {
+          setIsLoggedIn(true);
+          setUserRole(role);
+          setUserEmail(simState.email);
+          setCurrentView(role === 'admin' ? 'ADMIN_DASHBOARD' : 'STUDENT_DASHBOARD');
+        }}
+        onShowToast={showToast}
+        onNavigate={setCurrentView}
+        isLoggedIn={isLoggedIn}
+      />
     </div>
   );
 }

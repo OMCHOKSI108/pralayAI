@@ -27,6 +27,7 @@ export default function Navbar({
     { label: 'About', view: 'ABOUT' },
     { label: 'Manifesto', view: 'ABOUT' },
     { label: 'How It Works', view: 'HOW_IT_WORKS' },
+    { label: 'Careers', view: 'APPLY' },
     { label: 'Projects Registry', view: 'SHOWCASE' },
     { label: 'Verify Credentials', view: 'VERIFY' }
   ];
@@ -81,26 +82,39 @@ export default function Navbar({
           {/* RIGHT SECTION: CTA Buttons */}
           <div className="hidden md:flex items-center gap-6">
             {isLoggedIn ? (
-              <button 
-                onClick={() => onNavigate(userRole === 'admin' ? 'ADMIN_DASHBOARD' : 'STUDENT_DASHBOARD')}
-                className="bg-white hover:bg-neutral-200 text-black font-sans text-xs font-bold py-2 px-5 rounded-none cursor-pointer tracking-wider transition-colors uppercase h-9 flex items-center justify-center"
-              >
-                Open Terminal
-              </button>
-            ) : (
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
                 <button 
-                  onClick={() => onNavigate('LOGIN')}
-                  className="text-neutral-400 hover:text-white font-sans text-xs font-semibold cursor-pointer transition-colors"
+                  onClick={() => onNavigate(userRole === 'admin' ? 'ADMIN_DASHBOARD' : 'STUDENT_DASHBOARD')}
+                  className="bg-red-650 hover:bg-red-550 text-white font-sans text-xs font-bold py-2 px-5 rounded cursor-pointer tracking-wider transition-colors uppercase h-9 flex items-center justify-center font-mono"
                 >
-                  Sign In
+                  Terminal Dashboard
                 </button>
-                
-                <button
-                  onClick={() => onNavigate('APPLY')}
-                  className="bg-white hover:bg-[#E94560] text-black hover:text-white font-sans text-xs font-bold py-2 px-5 rounded-none cursor-pointer tracking-wide transition-all duration-200 h-9 flex items-center justify-center"
+                <button 
+                  onClick={onLogout}
+                  className="border border-white/10 hover:border-white/20 text-neutral-400 hover:text-white font-sans text-xs font-bold py-2 px-4 rounded cursor-pointer tracking-wide transition-all h-9 flex items-center justify-center"
                 >
-                  Developer Access
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => {
+                    onNavigate('APPLY');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="border border-[#E94560] hover:bg-[#E94560]/15 text-[#E94560] font-sans text-xs font-bold py-2 px-4 rounded cursor-pointer tracking-wide transition-all h-9 flex items-center justify-center font-mono"
+                >
+                  Apply ⚡
+                </button>
+                <button 
+                  onClick={() => {
+                    onNavigate('LOGIN');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="bg-white hover:bg-neutral-100 text-black font-sans text-xs font-bold py-2 px-5 rounded cursor-pointer tracking-wide transition-all h-9 flex items-center justify-center"
+                >
+                  Employee Portal (Sign In)
                 </button>
               </div>
             )}
@@ -163,18 +177,18 @@ export default function Navbar({
                   Open Terminal Dashboard
                 </button>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); onNavigate('LOGIN'); }}
-                    className="w-full py-2.5 bg-neutral-900 border border-white/5 text-neutral-200 font-bold tracking-wider uppercase text-[10px] rounded-none cursor-pointer"
-                  >
-                    Login
-                  </button>
+                <div className="w-full flex flex-col gap-2.5">
                   <button
                     onClick={() => { setMobileMenuOpen(false); onNavigate('APPLY'); }}
-                    className="w-full bg-white text-black font-bold py-2.5 text-center uppercase tracking-wider text-[10px] rounded-none cursor-pointer"
+                    className="w-full py-2.5 border border-[#E94560] text-[#E94560] font-bold text-center tracking-wider uppercase text-[10px] rounded-none cursor-pointer"
                   >
-                    Get Access
+                    Apply Now ⚡
+                  </button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); onNavigate('LOGIN'); }}
+                    className="w-full py-2.5 bg-white text-black font-bold text-center tracking-wider uppercase text-[10px] rounded-none cursor-pointer"
+                  >
+                    Employee Portal (Sign In)
                   </button>
                 </div>
               )}

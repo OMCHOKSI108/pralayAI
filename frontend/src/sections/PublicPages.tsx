@@ -15,6 +15,8 @@ import {
   Track, StudentProject, StudentApplication, INITIAL_PROJECTS, TRACKS, REQ_CERTIFICATE 
 } from '@/data/mockData';
 import HellwareLogo from '@/components/HellwareLogo';
+import CaseStudyDetail from '@/components/CaseStudyDetail';
+import BookingModal from '@/components/BookingModal';
 
 // ----------------------------------------------------
 // Toast trigger interface
@@ -24,11 +26,24 @@ interface PublicPageProps {
   onSubmitApplication: (app: Partial<StudentApplication>) => void;
   onShowToast: (msg: string, type: 'success' | 'warn' | 'error') => void;
   currentPublicView: string; // 'LANDING' | 'ABOUT' | 'HOW_IT_WORKS' | 'SHOWCASE' | 'APPLY' | 'VERIFY' | 'TERMS' | 'PRIVACY'
+  simState: any;
+  setSimState: React.Dispatch<React.SetStateAction<any>>;
 }
 
 export default function PublicPages({ 
-  onNavigate, onSubmitApplication, onShowToast, currentPublicView 
+  onNavigate, onSubmitApplication, onShowToast, currentPublicView, simState, setSimState
 }: PublicPageProps) {
+
+  // ==================================================
+  // CASE STUDY INTERFACE & BOOKINGS STATES
+  // ==================================================
+  const [selectedCaseStudyId, setSelectedCaseStudyId] = useState<string | null>(null);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+
+  // Clear case study selection if the main view changes
+  React.useEffect(() => {
+    setSelectedCaseStudyId(null);
+  }, [currentPublicView]);
 
   // ==================================================
   // PROJECTS SHOWCASE FILTER LOGIC
@@ -67,6 +82,9 @@ export default function PublicPages({
   // MULTI-STEP CAREERS AND APPLICATION FORM STATE
   // ==================================================
   const [applyStep, setApplyStep] = useState(1);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanLogList, setScanLogList] = useState<string[]>([]);
   const [appForm, setAppForm] = useState({
     fullName: 'Alex Mercer',
     email: 'omchoksi99@gmail.com',
@@ -175,24 +193,79 @@ export default function PublicPages({
       return;
     }
 
-    // Fire application submit up
-    onSubmitApplication({
-      fullName: appForm.fullName,
-      email: appForm.email,
-      phone: appForm.phone,
-      college: appForm.college,
-      gradYear: appForm.gradYear,
-      domainInterest: appForm.domainInterest,
-      skills: appForm.skills,
-      githubProfile: appForm.githubProfile,
-      linkedinProfile: appForm.linkedinProfile,
-      resumeFileName: appForm.resumeFileName,
-      status: 'PENDING',
-      appliedDate: new Date().toISOString().split('T')[0]
-    });
+    setIsScanning(true);
+    setScanProgress(0);
+    setScanLogList([
+      '⚡ [INITIAL STATE] CONNECTING TO HELLWARE EVALUATION STACK PROTOCOLS...',
+      '🔗 RESOLVING CLUSTER INGRESS PORTS FOR AUTONOMOUS CV PARSING...'
+    ]);
 
-    setApplyStep(3); // Show Success view
-    onShowToast('Application broadcast to audit stack success!', 'success');
+    const logs = [
+      '🔍 INGESTING CANDIDATE PORTFOLIO BRIEF FOR LOGICAL STRUCTURAL ANALYSIS...',
+      '📑 FILE SYSTEM READ: MATCHED DETECTED PDF ENVELOPE HEADER SYMBOLS.',
+      '🤖 RUNNING SEMANTIC TOKENIZATIONS TO IDENTIFY ACADEMIC DISCIPLINE BACKGROUNDS...',
+      `🎓 INSTITUTION PROFILE ACCUMULATED: [${appForm.college}]`,
+      '📦 WEAVING DYNAMIC LOGIC EMBEDDINGS IN CAPABILITIES GRID INDEX...',
+      `📟 SKILLS EXTRACTED: ${appForm.skills.join(', ') || 'React, TypeScript, Node.js'}`,
+      '🔌 VERIFYING PUBLIC CODE-GRAPH REPOSITORIES FOR PROOF-OF-WORK VERACITY...',
+      `🛰️ ATTACHING RECON SCAN MONITOR COMPLIANCE PIPELINES ON DISK: ${appForm.githubProfile}`,
+      '🛡️ SANITY RECON COMPLETE: ENVELOPE SECURE BOUNDS MEETING STANDARDS AUDIT OVERSEEN.',
+      '🌐 REGISTERING LEDGER IDENT COHORT BUNDLE PARAMETERS ACTIVE...',
+      '🔐 CACHING CUSTOM DIAGNOSTIC WATERMARK METADATA TO PUBLIC RELATIONAL MATRIX DATABASE...'
+    ];
+
+    let currentLogIdx = 0;
+    // Math.random() simulated delay from 3 to 10 seconds!
+    const randomDuration = Math.floor(Math.random() * 7000) + 3000; 
+    const stepInterval = randomDuration / 100;
+
+    const timer = setInterval(() => {
+      setScanProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(timer);
+          
+          onSubmitApplication({
+            fullName: appForm.fullName,
+            email: appForm.email,
+            phone: appForm.phone,
+            college: appForm.college,
+            gradYear: appForm.gradYear,
+            domainInterest: appForm.domainInterest,
+            skills: appForm.skills,
+            githubProfile: appForm.githubProfile,
+            linkedinProfile: appForm.linkedinProfile,
+            resumeFileName: appForm.resumeFileName,
+            status: 'PENDING',
+            appliedDate: new Date().toISOString().split('T')[0]
+          });
+
+          setSimState((prevSim: any) => ({
+            ...prevSim,
+            step: 'APPLIED',
+            fullName: appForm.fullName,
+            email: appForm.email,
+            college: appForm.college,
+            phone: appForm.phone,
+            gradYear: appForm.gradYear,
+            role: appForm.domainInterest,
+            skills: appForm.skills
+          }));
+
+          setIsScanning(false);
+          setApplyStep(3); // success applied state
+          onShowToast('CV analytical metrics scanned and parsed successfully! Welcome to the cohort wait-stream.', 'success');
+          return 100;
+        }
+
+        const nextProg = prev + 1;
+        if (nextProg % 9 === 0 && currentLogIdx < logs.length) {
+          setScanLogList(l => [...l, `> ${logs[currentLogIdx]}`]);
+          currentLogIdx += 1;
+        }
+
+        return nextProg;
+      });
+    }, stepInterval);
   };
 
   // Leaderboard statistics filtering is removed as of core feature trim.
@@ -214,10 +287,21 @@ export default function PublicPages({
   return (
     <div className="relative z-10 w-full min-h-screen text-white select-none">
       
-      {/* -------------------------------------------------------------------------------- */}
-      {/* LANDING PAGE public layout */}
-      {/* -------------------------------------------------------------------------------- */}
-      {currentPublicView === 'LANDING' && (
+      {selectedCaseStudyId ? (
+        <CaseStudyDetail 
+          projectId={selectedCaseStudyId}
+          onClose={() => {
+            setSelectedCaseStudyId(null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          onBookCall={() => setIsBookingOpen(true)}
+        />
+      ) : (
+        <>
+          {/* -------------------------------------------------------------------------------- */}
+          {/* LANDING PAGE public layout */}
+          {/* -------------------------------------------------------------------------------- */}
+          {currentPublicView === 'LANDING' && (
         <div id="landing-anchor" className="space-y-32 pb-24">
           
           {/* Bold Hero Section */}
@@ -290,6 +374,86 @@ export default function PublicPages({
                 <span className="text-3xl md:text-4xl font-mono font-bold text-green-400">₹0 Fee</span>
                 <p className="text-[10px] uppercase font-mono tracking-widest text-gray-500">Mandatory Free Syllabus</p>
               </div>
+            </div>
+          </section>
+
+          {/* HELLWARE Enterprise capabilities & custom Case Studies Showcase */}
+          <section className="max-w-7xl mx-auto px-6 md:px-12 text-left space-y-16" id="case-studies-section">
+            <div className="space-y-3">
+              <span className="text-red-500 text-xs font-mono tracking-widest uppercase">// ENTERPRISE CAPABILITIES & PRODUCTS</span>
+              <h2 className="text-3xl md:text-5xl font-black tracking-tight uppercase">HELLWARE CAPABILITIES & CASE STUDIES</h2>
+              <p className="text-gray-400 text-xs md:text-sm font-light leading-relaxed max-w-2xl">
+                We design and deploy high-performance, security-hardened computational infrastructure. From state-replicating AI model matrices to zero-knowledge audit ledgers, explore some of our real-world custom implementations.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                {
+                  id: 'CASE-01',
+                  tag: 'AI & NEURAL INFRASTRUCTURE',
+                  title: 'DeepCognition Multi-Agent LLM Grid',
+                  metrics: '99.4% Latency Reduction',
+                  desc: 'A robust routing proxy pipeline synchronizing telemetry prompts metrics across distributed clusters. Successfully parsed over 4.2 million context-tokens without rate-limit proxy triggers.',
+                  tech: ['Python', 'FastAPI', 'Redis Cache', 'gRPC API']
+                },
+                {
+                  id: 'CASE-02',
+                  tag: 'COMPLIANCE & SECURE FIREWALLS',
+                  title: 'AIGIS Sentinel Network Payload Shield',
+                  metrics: 'Sub-Millisecond Zero-Day Blocks',
+                  desc: 'Deployed real-time isolated regex classifier clusters tracking and sanitizing payload parameters on active high-speed staging environments to quarantine potential server PII leaks.',
+                  tech: ['Go', 'Docker Sandbox', 'Regex OCR', 'Kubernetes']
+                },
+                {
+                  id: 'CASE-03',
+                  tag: 'CRYPTOGRAPHIC LEDGER NODE',
+                  title: 'High-Frequency settlement Clearance Ledger',
+                  metrics: '128,000 Atomic Swaps/sec',
+                  desc: 'Engineered a cryptographically verified internal database using rotating compliance HMAC security keyrings to ensure non-duplicable transactional settlements on staging buffers.',
+                  tech: ['Rust', 'WebSocket ring', 'SHA-256 HMAC', 'LevelDB']
+                }
+              ].map((cs) => (
+                <div 
+                  key={cs.id} 
+                  onClick={() => {
+                    const idMap: Record<string, string> = {
+                      'CASE-01': 'proj-4',
+                      'CASE-02': 'proj-1',
+                      'CASE-03': 'proj-2'
+                    };
+                    setSelectedCaseStudyId(idMap[cs.id] || 'proj-1');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="bg-neutral-900/40 hover:bg-neutral-900/60 p-8 rounded-xl border border-white/5 hover:border-red-500/30 transition-all flex flex-col justify-between h-[360px] group cursor-pointer hover:shadow-lg hover:shadow-red-500/5 duration-300 select-none text-left"
+                >
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center text-[10px] font-mono font-bold">
+                      <span className="text-red-500 bg-red-500/10 px-2 py-0.5 rounded uppercase">{cs.tag}</span>
+                      <span className="text-gray-500">{cs.id}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <h4 className="text-lg font-bold text-white tracking-tight text-glow-red group-hover:text-red-400 duration-300">{cs.title}</h4>
+                      <p className="text-xs text-gray-400 leading-relaxed font-light">{cs.desc}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-6 mt-auto border-t border-white/5">
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs font-mono text-emerald-400 font-bold">{cs.metrics}</div>
+                      <div className="text-[10px] font-mono text-red-400 font-bold group-hover:text-red-300 flex items-center gap-1">
+                        <span>VIEW DETAILS</span>
+                        <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 font-mono text-[9px] text-gray-400">
+                      {cs.tech.map((tc, keyidx) => (
+                        <span key={keyidx} className="bg-white/5 px-2 py-0.5 rounded border border-white/5">{tc}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -1526,6 +1690,58 @@ export default function PublicPages({
           </div>
         </div>
       )}
+
+      {/* ISOMORPHIC DIAGNOSTIC OVERLAY DETECTOR */}
+      {isScanning && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur flex items-center justify-center p-6 z-50 font-mono select-none">
+          <div className="max-w-xl w-full bg-neutral-950 border border-red-500/30 rounded-lg p-8 space-y-6 text-left relative shadow-2xl">
+            
+            {/* Decorative corners */}
+            <div className="absolute top-0 left-0 w-3 h-3 border-t-2 border-l-2 border-red-500" />
+            <div className="absolute top-0 right-0 w-3 h-3 border-t-2 border-r-2 border-red-500" />
+            <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-red-500" />
+            <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-red-500" />
+
+            <div className="space-y-2 border-b border-white/10 pb-4">
+              <div className="flex justify-between items-center text-[10px] text-red-500 font-black tracking-widest uppercase animate-pulse">
+                <span>// CRITICAL CV SCANNING ENVELOPE INBOUND //</span>
+                <span>SANDBOX COMPILER LIVE</span>
+              </div>
+              <h3 className="text-base font-bold text-white uppercase tracking-tight">AI Dossier Analysis Sandbox</h3>
+            </div>
+
+            {/* Progress animation with diagnostics */}
+            <div className="space-y-2">
+              <div className="flex justify-between font-mono text-xs uppercase font-extrabold text-slate-350">
+                <span>Processing payload: {appForm.resumeFileName}</span>
+                <span className="text-red-500">{scanProgress}% COMPLETE</span>
+              </div>
+              <div className="w-full bg-neutral-900 border border-white/5 h-2.5 rounded overflow-hidden">
+                <div 
+                  className="bg-red-500 h-full transition-all duration-75"
+                  style={{ width: `${scanProgress}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Live running diagnostic logging terminal */}
+            <div className="h-44 bg-black/95 border border-white/5 rounded p-4 text-[10px] text-gray-400 font-mono uppercase space-y-1.5 overflow-y-auto leading-normal select-text selection:bg-red-500/20 scrollbar-none" id="scanning-terminal-output">
+              {scanLogList.map((log, idx) => (
+                <div key={idx} className={idx === scanLogList.length - 1 ? 'text-white font-bold tracking-tight animate-pulse' : ''}>
+                  {log}
+                </div>
+              ))}
+              <div className="text-red-500 font-black mt-2 animate-pulse">// STRICT EXPERIENTIAL COMPILING CHANNELS CONNECTED...</div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+        </>
+      )}
+
+      <BookingModal isOpen={isBookingOpen} onClose={() => setIsBookingOpen(false)} />
 
     </div>
   );

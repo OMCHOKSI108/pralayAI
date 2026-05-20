@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Lock, Mail, User, Eye, EyeOff, CheckCircle2, ChevronRight } from 'lucide-react';
 import { GitHubIcon } from '@/components/SocialIcons';
+function Github({ className }: { className?: string }) { return <GitHubIcon className={className} />; }
 import HellwareLogo from '@/components/HellwareLogo';
 
 interface AuthPagesProps {
@@ -14,15 +15,16 @@ interface AuthPagesProps {
   onNavigate: (view: string) => void;
   onLoginSuccess: (role: 'student' | 'admin') => void;
   onShowToast: (msg: string, type: 'success' | 'warn' | 'error') => void;
+  simState: any;
 }
 
 export default function AuthPages({ 
-  currentView, onNavigate, onLoginSuccess, onShowToast 
+  currentView, onNavigate, onLoginSuccess, onShowToast, simState 
 }: AuthPagesProps) {
   
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('omchoksi99@gmail.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('Alex Mercer');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -30,17 +32,26 @@ export default function AuthPages({
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      onShowToast('Please type your registry email and pass-key.', 'warn');
+      onShowToast('Please provide your Employee ID or Registry Email and Access Key.', 'warn');
       return;
     }
 
+    const inputLower = email.toLowerCase().trim();
+    const isEmpID = inputLower === 'hw-mercer-2026';
+    const isSimulatedEmail = inputLower === simState.email.toLowerCase().trim() || inputLower === 'omchoksi99@gmail.com';
+
     // Role detection trigger for simulated login flow
-    if (email.toLowerCase().includes('admin')) {
+    if (inputLower.includes('admin') || inputLower === 'admin') {
       onLoginSuccess('admin');
-      onShowToast('Welcome, Administrator. Admin overlay initialized.', 'success');
-    } else {
+      onShowToast('Administrator authentication granted: Core registry console unlocked.', 'success');
+    } else if ((isEmpID || isSimulatedEmail) && password === 'HELLPASS99') {
       onLoginSuccess('student');
-      onShowToast('Credentials validated. Custom student workspace loaded.', 'success');
+      onShowToast('Handshake verified. Decrypting sandboxed employee workspace...', 'success');
+    } else if (password === 'password123' && isSimulatedEmail) {
+      onLoginSuccess('student');
+      onShowToast('Legacy passcode bypass standard: Workspace decrypting...', 'success');
+    } else {
+      onShowToast('Unresolved ledger hash node parameters. Invalid ID, email, or passcode.', 'error');
     }
   };
 
@@ -163,11 +174,11 @@ export default function AuthPages({
               type="button"
               onClick={() => {
                 onLoginSuccess('student');
-                onShowToast('Handshake synced with simulated GitHubIcon workspace.', 'success');
+                onShowToast('Handshake synced with simulated GitHub workspace.', 'success');
               }}
               className="w-full py-2 border border-white/10 hover:border-white/20 hover:bg-white/[0.02] text-xs font-mono text-gray-400 hover:text-white flex items-center justify-center gap-2.5 rounded-[4px] cursor-pointer"
             >
-              <GitHubIcon className="w-4 h-4" /> Continue with GitHubIcon workspace
+              <Github className="w-4 h-4" /> Continue with GitHub workspace
             </button>
 
             <div className="text-center pt-2">

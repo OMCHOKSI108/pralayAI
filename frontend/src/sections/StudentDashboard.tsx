@@ -11,6 +11,7 @@ import {
   CheckCircle2, AlertTriangle, AlertCircle, RefreshCw, LogOut, LayoutGrid, Download, Info
 } from 'lucide-react';
 import { GitHubIcon } from '@/components/SocialIcons';
+function Github({ className }: { className?: string }) { return <GitHubIcon className={className} />; }
 import { 
   StudentProject, Submission, Resource, TRACKS, INITIAL_PROJECTS, INITIAL_RESOURCES, REQ_BADGES, REQ_CERTIFICATE 
 } from '@/data/mockData';
@@ -66,7 +67,7 @@ export default function StudentDashboard({
 
   // Interactive submission handles
   const [subForm, setSubForm] = useState({
-    githubUrl: 'https://GitHubIcon.com/alex-mercer/hellware-threat-pipeline',
+    githubUrl: 'https://github.com/alex-mercer/hellware-threat-pipeline',
     liveUrl: 'https://threat-pipeline.hellware-sandbox.app',
     videoUrl: 'https://loom.com/v/threat-engine-walkthrough',
     notes: 'Memory ring allocation is completed. Threat metrics graphs update synchronously.',
@@ -155,7 +156,7 @@ export default function StudentDashboard({
   const handleSubmissionDispatch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!subForm.githubUrl || !subForm.liveUrl) {
-      onShowToast('GitHubIcon Repository and Live Sandbox URLs are required.', 'warn');
+      onShowToast('GitHub Repository and Live Sandbox URLs are required.', 'warn');
       return;
     }
 
@@ -1199,7 +1200,7 @@ export default function StudentDashboard({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   
                   <div className="space-y-1">
-                    <label className="text-[10px] font-mono uppercase text-gray-500 font-bold">Public GitHubIcon Code Repository URL</label>
+                    <label className="text-[10px] font-mono uppercase text-gray-500 font-bold">Public GitHub Code Repository URL</label>
                     <input 
                       type="url" 
                       required
