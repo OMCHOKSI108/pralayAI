@@ -70,3 +70,86 @@ export async function uploadBackendPaymentProof(input: {
   });
   return parseResponse<{ paymentId: string; screenshotUrl: string }>(response);
 }
+
+// ─── Auth ───────────────────────────────────────────────────────
+
+export async function loginBackend(email: string, password: string) {
+  const response = await fetch(`${backendUrl}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+  return parseResponse<{ id: string; email: string; role: string; token: string }>(response);
+}
+
+export async function registerBackend(input: {
+  email: string;
+  password: string;
+  fullName: string;
+  role?: string;
+  adminSetupToken?: string;
+}) {
+  const response = await fetch(`${backendUrl}/api/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input)
+  });
+  return parseResponse<{ id: string; email: string; role: string }>(response);
+}
+
+// ─── Admin ──────────────────────────────────────────────────────
+
+export async function getBackendMetrics(token: string) {
+  const response = await fetch(`${backendUrl}/api/admin/metrics`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return parseResponse<{
+    totalStudents: number;
+    totalApplied: number;
+    totalApproved: number;
+    pendingPayments: number;
+    successfulPaymentCount: number;
+    successfulPaymentAmount: number;
+    recentApplications: Array<{
+      id: string; fullName: string; email: string; phone: string | null;
+      college: string | null; gradYear: string | null; skills: string[];
+      status: string; createdAt: string;
+    }>;
+    recentPayments: Array<Record<string, unknown>>;
+  }>(response);
+}
+
+export async function getBackendApplications(token: string, status?: string) {
+  const url = status
+    ? `${backendUrl}/api/admin/applications?status=${status}`
+    : `${backendUrl}/api/admin/applications`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return parseResponse<Array<{
+    id: string; fullName: string; email: string; phone: string | null;
+    college: string | null; gradYear: string | null; skills: string[];
+    status: string; createdAt: string;
+  }>>(response);
+}
+
+export async function updateBackendApplication(token: string, id: string, status: string) {
+  const response = await fetch(`${backendUrl}/api/admin/applications/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ status })
+  });
+  return parseResponse<Record<string, unknown>>(response);
+}
+
+// ─── Student ────────────────────────────────────────────────────
+
+export async function getMyBackendApplication(token: string) {
+  const response = await fetch(`${backendUrl}/api/applications/me`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return parseResponse<Record<string, unknown>>(response);
+}

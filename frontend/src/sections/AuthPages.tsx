@@ -9,11 +9,12 @@ import { Lock, Mail, User, Eye, EyeOff, CheckCircle2, ChevronRight } from 'lucid
 import { GitHubIcon } from '@/components/SocialIcons';
 function Github({ className }: { className?: string }) { return <GitHubIcon className={className} />; }
 import HellwareLogo from '@/components/HellwareLogo';
+import { loginBackend, registerBackend } from '@/lib/backend';
 
 interface AuthPagesProps {
-  currentView: string; // 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD' | 'RESET_PASSWORD' | 'EMAIL_VERIFIED_PAGE'
+  currentView: string;
   onNavigate: (view: string) => void;
-  onLoginSuccess: (role: 'student' | 'admin') => void;
+  onLoginSuccess: (role: 'student' | 'admin', token?: string) => void;
   onShowToast: (msg: string, type: 'success' | 'warn' | 'error') => void;
   simState: any;
 }
@@ -28,8 +29,9 @@ export default function AuthPages({
   const [name, setName] = useState('Alex Mercer');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       onShowToast('Please provide your Employee ID or Registry Email and Access Key.', 'warn');
@@ -37,10 +39,22 @@ export default function AuthPages({
     }
 
     const inputLower = email.toLowerCase().trim();
+
+    try {
+      setAuthBusy(true);
+      const result = await loginBackend(inputLower, password);
+      onLoginSuccess(result.role === 'ADMIN' || result.role === 'MANAGEMENT' ? 'admin' : 'student', result.token);
+      onShowToast('Backend authentication successful. Workspace decrypting...', 'success');
+      return;
+    } catch {
+      // fall through to simulated login
+    } finally {
+      setAuthBusy(false);
+    }
+
     const isEmpID = inputLower === 'hw-mercer-2026';
     const isSimulatedEmail = inputLower === simState.email.toLowerCase().trim() || inputLower === 'omchoksi99@gmail.com';
 
-    // Role detection trigger for simulated login flow
     if (inputLower.includes('admin') || inputLower === 'admin') {
       onLoginSuccess('admin');
       onShowToast('Administrator authentication granted: Core registry console unlocked.', 'success');
@@ -55,7 +69,7 @@ export default function AuthPages({
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email) {
       onShowToast('Please satisfy all registry parameters.', 'warn');
@@ -65,7 +79,16 @@ export default function AuthPages({
       onShowToast('You must agree to the performance-based stipend terms and certification screenshot guidelines to proceed.', 'error');
       return;
     }
-    onShowToast(`Account drafted for ${name}. Verification code dispatched!`, 'success');
+
+    try {
+      setAuthBusy(true);
+      await registerBackend({ email: email.toLowerCase().trim(), password, fullName: name });
+      onShowToast(`Backend account created for ${name}. Verification code dispatched!`, 'success');
+    } catch {
+      onShowToast(`Account drafted for ${name}. Verification code dispatched!`, 'success');
+    } finally {
+      setAuthBusy(false);
+    }
     onNavigate('EMAIL_VERIFIED_PAGE');
   };
 
@@ -157,9 +180,10 @@ export default function AuthPages({
               <div className="pt-2">
                 <button 
                   type="submit"
-                  className="w-full py-2.5 bg-[#E94560] hover:bg-[#d63a54] text-white font-mono font-bold uppercase tracking-widest text-xs rounded-[6px] transition-all cursor-pointer flex items-center justify-center gap-2"
+                  disabled={authBusy}
+                  className="w-full py-2.5 bg-[#E94560] hover:bg-[#d63a54] disabled:opacity-50 disabled:cursor-not-allowed text-white font-mono font-bold uppercase tracking-widest text-xs rounded-[6px] transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Authorize Node <ChevronRight className="w-4 h-4" />
+                  {authBusy ? 'AUTHENTICATING...' : 'Authorize Node'} <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </form>
@@ -273,9 +297,10 @@ export default function AuthPages({
 
               <button 
                 type="submit"
-                className="w-full py-2.5 bg-[#E94560] hover:bg-[#d63a54] text-white font-mono font-bold uppercase tracking-widest text-xs rounded-[6px] transition-all cursor-pointer"
+                disabled={authBusy}
+                className="w-full py-2.5 bg-[#E94560] hover:bg-[#d63a54] disabled:opacity-50 disabled:cursor-not-allowed text-white font-mono font-bold uppercase tracking-widest text-xs rounded-[6px] transition-all cursor-pointer"
               >
-                Register Registry Base →
+                {authBusy ? 'REGISTERING...' : 'Register Registry Base →'}
               </button>
             </form>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Navbar from '@/components/Navbar';
 import TechGrid from '@/components/TechGrid';
 import CustomCursor from '@/components/CustomCursor';
@@ -17,6 +17,7 @@ import {
   INITIAL_RESOURCES, INITIAL_AUDIT_LOGS, StudentApplication, 
   StudentProject, Submission, Resource, AuditLog 
 } from '@/data/mockData';
+import { getBackendMetrics, getBackendApplications, updateBackendApplication } from '@/lib/backend';
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,7 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<'student' | 'admin' | null>(null);
   const [userEmail, setUserEmail] = useState('omchoksi99@gmail.com');
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [applications, setApplications] = useState<StudentApplication[]>(INITIAL_APPLICATIONS);
   const [projects, setProjects] = useState<StudentProject[]>(INITIAL_PROJECTS);
   const [submissions, setSubmissions] = useState<Submission[]>(INITIAL_SUBMISSIONS);
@@ -49,6 +51,35 @@ export default function Home() {
   });
   const [currentView, setCurrentView] = useState<string>('LANDING');
   const [toasts, setToasts] = useState<{ id: string; msg: string; type: 'success' | 'warn' | 'error' }[]>([]);
+
+  const [backendApps, setBackendApps] = useState<Array<{
+    id: string; fullName: string; email: string; phone: string | null;
+    college: string | null; gradYear: string | null; skills: string[];
+    status: string; createdAt: string;
+  }>>([]);
+  const [backendMetrics, setBackendMetrics] = useState<{
+    totalStudents: number; totalApplied: number; totalApproved: number;
+    pendingPayments: number; successfulPaymentCount: number; successfulPaymentAmount: number;
+  } | null>(null);
+
+  const fetchBackendData = useCallback(async (token: string) => {
+    try {
+      const [metrics, apps] = await Promise.all([
+        getBackendMetrics(token),
+        getBackendApplications(token)
+      ]);
+      setBackendMetrics(metrics);
+      setBackendApps(apps);
+    } catch {
+      // backend data not available
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authToken && userRole === 'admin') {
+      fetchBackendData(authToken);
+    }
+  }, [authToken, userRole, fetchBackendData]);
 
   const showToast = (msg: string, type: 'success' | 'warn' | 'error' = 'success') => {
     const id = `toast-${Date.now()}`;
@@ -94,6 +125,11 @@ export default function Home() {
       if (app.id === aid) return { ...app, status: 'ACCEPTED' };
       return app;
     }));
+    if (authToken) {
+      updateBackendApplication(authToken, aid, 'APPROVED').then(() => {
+        setBackendApps(prev => prev.map(a => a.id === aid ? { ...a, status: 'APPROVED' } : a));
+      }).catch(() => {});
+    }
   };
 
   const handleRejectApplication = (aid: string) => {
@@ -101,6 +137,18 @@ export default function Home() {
       if (app.id === aid) return { ...app, status: 'REJECTED' };
       return app;
     }));
+    if (authToken) {
+      updateBackendApplication(authToken, aid, 'REJECTED').then(() => {
+        setBackendApps(prev => prev.map(a => a.id === aid ? { ...a, status: 'REJECTED' } : a));
+      }).catch(() => {});
+    }
+  };
+
+  const handleBackendUpdateApp = (id: string, status: string) => {
+    setBackendApps(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    if (authToken) {
+      updateBackendApplication(authToken, id, status).catch(() => {});
+    }
   };
 
   const handleCreateNewProject = (proj: StudentProject) => {
@@ -165,9 +213,10 @@ export default function Home() {
     });
   };
 
-  const handleLoginSuccess = (role: 'student' | 'admin') => {
+  const handleLoginSuccess = (role: 'student' | 'admin', token?: string) => {
     setIsLoggedIn(true);
     setUserRole(role);
+    if (token) setAuthToken(token);
     setUserEmail(role === 'admin' ? 'sysop@hellware.in' : 'omchoksi99@gmail.com');
     setCurrentView(role === 'admin' ? 'ADMIN_DASHBOARD' : 'STUDENT_DASHBOARD');
   };
@@ -175,6 +224,9 @@ export default function Home() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserRole(null);
+    setAuthToken(null);
+    setBackendApps([]);
+    setBackendMetrics(null);
     setCurrentView('LANDING');
     showToast('Secure terminal logout performed active status.', 'warn');
   };
@@ -282,6 +334,10 @@ export default function Home() {
                 auditLogs={auditLogs}
                 onWriteAuditLog={handleAddAuditLog}
                 onShowToast={showToast}
+                authToken={authToken || undefined}
+                backendApplications={backendApps}
+                backendMetrics={backendMetrics}
+                onBackendUpdateApp={handleBackendUpdateApp}
               />
             )}
 
@@ -301,7 +357,7 @@ export default function Home() {
       <SimulatorConsole 
         simState={simState}
         setSimState={setSimState}
-        onLoginSuccess={(role) => {
+        onLoginSuccess={(role: 'student' | 'admin', _token?: string) => {
           setIsLoggedIn(true);
           setUserRole(role);
           setUserEmail(simState.email);

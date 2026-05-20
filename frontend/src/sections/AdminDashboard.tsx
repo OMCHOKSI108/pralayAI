@@ -13,9 +13,19 @@ import {
   StudentApplication, StudentProject, Submission, Resource, AuditLog, Track, TRACKS 
 } from '@/data/mockData';
 
+interface BackendApp {
+  id: string; fullName: string; email: string; phone: string | null;
+  college: string | null; gradYear: string | null; skills: string[];
+  status: string; createdAt: string;
+}
+
+interface BackendMetrics {
+  totalStudents: number; totalApplied: number; totalApproved: number;
+  pendingPayments: number; successfulPaymentCount: number; successfulPaymentAmount: number;
+}
+
 interface AdminDashboardProps {
   onLogout: () => void;
-  // Shared state triggers
   applications: StudentApplication[];
   onAcceptApplication: (aid: string) => void;
   onRejectApplication: (aid: string) => void;
@@ -30,6 +40,10 @@ interface AdminDashboardProps {
   auditLogs: AuditLog[];
   onWriteAuditLog: (action: string, severity: 'INFO' | 'WARNING' | 'CRITICAL') => void;
   onShowToast: (msg: string, type: 'success' | 'warn' | 'error') => void;
+  authToken?: string;
+  backendApplications?: BackendApp[];
+  backendMetrics?: BackendMetrics | null;
+  onBackendUpdateApp?: (id: string, status: string) => void;
 }
 
 export default function AdminDashboard({
@@ -38,7 +52,8 @@ export default function AdminDashboard({
   projects, onCreateProject, onDeleteProject,
   submissions, onReviewSubmission,
   resources, onCreateResource, onDeleteResource,
-  auditLogs, onWriteAuditLog, onShowToast
+  auditLogs, onWriteAuditLog, onShowToast,
+  authToken, backendApplications, backendMetrics, onBackendUpdateApp
 }: AdminDashboardProps) {
 
   // Selected sub view paths
@@ -263,6 +278,27 @@ export default function AdminDashboard({
           {activeTab === 'OVERVIEW' && (
             <div className="space-y-8">
               
+              {/* Backend metrics (when connected) */}
+              {backendMetrics ? (
+                <div className="space-y-2">
+                  <span className="text-[8px] font-mono text-emerald-500 uppercase block font-bold">// BACKEND LIVE METRICS</span>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[
+                      { label: 'TOTAL STUDENTS (BACKEND)', value: backendMetrics.totalStudents, d: 'PostgreSQL live count' },
+                      { label: 'APPLIED', value: backendMetrics.totalApplied, d: 'Status: APPLIED', color: 'text-amber-500' },
+                      { label: 'APPROVED / VERIFIED', value: backendMetrics.totalApproved, d: 'Status: APPROVED/VERIFIED', color: 'text-emerald-400' },
+                      { label: 'PAYMENT COLLECTED', value: `₹${backendMetrics.successfulPaymentAmount}`, d: `${backendMetrics.successfulPaymentCount} successful`, color: 'text-blue-400' }
+                    ].map((stat, sIdx) => (
+                      <div key={`be-${sIdx}`} className="bg-emerald-950/20 p-6 rounded-xl border border-emerald-500/10 space-y-2 text-left">
+                        <span className="text-[8px] font-mono text-emerald-500/70 uppercase block font-bold leading-tight">{stat.label}</span>
+                        <div className={`text-3xl font-black font-mono tracking-tight ${stat.color || 'text-white'}`}>{stat.value}</div>
+                        <span className="text-[9px] font-mono text-gray-600 block">{stat.d}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               {/* Stat metrics cards grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
@@ -365,7 +401,51 @@ export default function AdminDashboard({
                 </div>
               </div>
 
-              {/* Candidates listings table */}
+              {/* Backend live applications (when connected) */}
+              {backendApplications && backendApplications.length > 0 ? (
+                <div className="space-y-3">
+                  <span className="text-[8px] font-mono text-emerald-500 uppercase block font-bold">// BACKEND LIVE APPLICATIONS</span>
+                  <div className="bg-black border border-emerald-500/20 rounded-xl overflow-hidden">
+                    <div className="bg-emerald-950/30 px-6 py-3 border-b border-emerald-500/10 text-[9px] font-mono text-emerald-500 uppercase tracking-wider grid grid-cols-12 gap-4">
+                      <span className="col-span-3">CANDIDATE</span>
+                      <span className="col-span-3">INSTITUTION</span>
+                      <span className="col-span-2">SKILLS</span>
+                      <span className="col-span-1">STATUS</span>
+                      <span className="col-span-3 text-right">OPERATIONS</span>
+                    </div>
+                    <div className="divide-y divide-emerald-500/5">
+                      {backendApplications.map((app) => (
+                        <div key={app.id} className="px-6 py-3.5 flex flex-col md:grid md:grid-cols-12 gap-4 items-center text-xs tracking-tight hover:bg-emerald-950/10">
+                          <div className="col-span-3 text-left">
+                            <span className="font-bold text-white block uppercase">{app.fullName}</span>
+                            <span className="text-[10px] text-gray-500 font-mono block">{app.email}</span>
+                          </div>
+                          <span className="col-span-3 text-gray-300 text-[10px] uppercase truncate block w-full">{app.college || '-'}</span>
+                          <span className="col-span-2 font-mono text-[10px] text-gray-400 truncate">{app.skills?.join(', ') || '-'}</span>
+                          <span className={`col-span-1 font-mono text-[9px] uppercase px-2 py-0.5 rounded ${
+                            app.status === 'APPROVED' || app.status === 'VERIFIED' ? 'bg-emerald-500/10 text-emerald-400' :
+                            app.status === 'REJECTED' ? 'bg-red-500/10 text-red-500' :
+                            app.status === 'APPLIED' ? 'bg-amber-500/10 text-amber-500' :
+                            'bg-gray-500/10 text-gray-400'
+                          }`}>{app.status}</span>
+                          <div className="col-span-3 text-right flex justify-end gap-2 text-xs">
+                            {app.status === 'APPLIED' ? (
+                              <>
+                                <button onClick={() => { onBackendUpdateApp?.(app.id, 'APPROVED'); onWriteAuditLog(`BACKEND APPROVED: ${app.fullName.toUpperCase()}`, 'INFO'); onShowToast(`Backend approved ${app.fullName}`, 'success'); }} className="p-1 text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/10 rounded cursor-pointer" title="Approve"><Check className="w-4 h-4" /></button>
+                                <button onClick={() => { onBackendUpdateApp?.(app.id, 'REJECTED'); onWriteAuditLog(`BACKEND REJECTED: ${app.fullName.toUpperCase()}`, 'WARNING'); onShowToast(`Backend rejected ${app.fullName}`, 'error'); }} className="p-1 text-red-400 hover:bg-red-500/10 border border-red-500/10 rounded cursor-pointer" title="Reject"><X className="w-4 h-4" /></button>
+                              </>
+                            ) : (
+                              <span className="text-[9px] font-mono text-gray-600 block uppercase">{app.status}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Candidates listings table (mock simulation) */}
               <div className="bg-black border border-white/5 rounded-xl overflow-hidden">
                 <div className="bg-neutral-900 px-6 py-3 border-b border-white/5 text-[9px] font-mono text-gray-500 uppercase tracking-wider grid grid-cols-12 gap-4">
                   <span className="col-span-3">CANDIDATE INFOLOGY</span>
