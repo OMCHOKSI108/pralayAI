@@ -55,6 +55,8 @@ interface AdminDashboardProps {
   onBackendUpdateApp?: (id: string, status: string) => void;
   backendPayments?: BackendPayment[];
   onBackendVerifyPayment?: (id: string, status: string, reason?: string) => void;
+  studentStages?: Record<string, string>;
+  onUpdateStudentStage?: (email: string, stage: string) => void;
 }
 
 export default function AdminDashboard({
@@ -65,7 +67,8 @@ export default function AdminDashboard({
   resources, onCreateResource, onDeleteResource,
   auditLogs, onWriteAuditLog, onShowToast,
   authToken, backendApplications, backendMetrics, onBackendUpdateApp,
-  backendPayments, onBackendVerifyPayment
+  backendPayments, onBackendVerifyPayment,
+  studentStages, onUpdateStudentStage
 }: AdminDashboardProps) {
 
   // Selected sub view paths
@@ -85,6 +88,10 @@ export default function AdminDashboard({
   const [paymentFilter, setPaymentFilter] = useState('ALL');
   const [rejectReason, setRejectReason] = useState('');
   const [rejectModalId, setRejectModalId] = useState<string | null>(null);
+
+  // Stage control states
+  const [generatedEmail, setGeneratedEmail] = useState<string>('');
+  const [emailLoading, setEmailLoading] = useState(false);
 
   // Project creator states
   const [projectFormOpen, setProjectFormOpen] = useState(false);
@@ -651,6 +658,82 @@ export default function AdminDashboard({
                                   <div><span className="text-gray-500 font-mono text-[9px] uppercase block">Skills</span><span className="text-white">{(selected.skills?.join(', ') || '-')}</span></div>
                                   <div><span className="text-gray-500 font-mono text-[9px] uppercase block">Submissions</span><span className="text-white">{selected.submissionsCount}</span></div>
                                 </div>
+                              </div>
+
+                              {/* Stage Control */}
+                              <div className="border-t border-white/10 pt-4 space-y-3">
+                                <span className="text-[9px] text-gray-500 font-mono uppercase block font-bold">// STAGE CONTROL</span>
+                                <div className="flex items-center gap-3">
+                                  <select
+                                    value={studentStages?.[selected.email] || 'APPLIED'}
+                                    onChange={(e) => onUpdateStudentStage?.(selected.email, e.target.value)}
+                                    className="bg-neutral-900 text-xs border border-white/10 px-3 py-1.5 focus:outline-none focus:border-red-500 text-white font-mono"
+                                  >
+                                    {['APPLIED', 'ONBOARDED', 'INTERNSHIP', 'COMPLETED', 'CERTIFICATION_READY', 'PAYMENT_SUBMITTED', 'PAYMENT_VERIFIED', 'CERTIFICATE_ISSUED'].map(s => (
+                                      <option key={s} value={s}>{s}</option>
+                                    ))}
+                                  </select>
+                                  <span className={`text-[9px] font-mono px-2 py-0.5 rounded ${
+                                    (studentStages?.[selected.email] || 'APPLIED') === 'CERTIFICATE_ISSUED' ? 'bg-emerald-500/10 text-emerald-400' :
+                                    (studentStages?.[selected.email] || 'APPLIED') === 'CERTIFICATION_READY' ? 'bg-amber-500/10 text-amber-500' :
+                                    (studentStages?.[selected.email] || 'APPLIED') === 'INTERNSHIP' ? 'bg-blue-500/10 text-blue-400' :
+                                    'bg-gray-500/10 text-gray-400'
+                                  }`}>
+                                    Current: {studentStages?.[selected.email] || 'APPLIED'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Email Generator */}
+                              <div className="border-t border-white/10 pt-4 space-y-3">
+                                <span className="text-[9px] text-gray-500 font-mono uppercase block font-bold">// EMAIL GENERATOR (GROQ)</span>
+                                <div className="flex gap-2">
+                                  {(['welcome', 'completion', 'certificate_ready', 'payment_verified'] as const).map(type => (
+                                    <button
+                                      key={type}
+                                      onClick={async () => {
+                                        setEmailLoading(true);
+                                        setGeneratedEmail('');
+                                        try {
+                                          const res = await fetch('/api/llm/generate-email', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                              studentName: selected.fullName,
+                                              studentEmail: selected.email,
+                                              internshipDomain: 'Cyber Security',
+                                              emailType: type,
+                                            }),
+                                          });
+                                          const data = await res.json();
+                                          if (data.success) {
+                                            setGeneratedEmail(data.data.emailContent);
+                                          } else {
+                                            onShowToast('Failed to generate email', 'error');
+                                          }
+                                        } catch {
+                                          onShowToast('Failed to generate email', 'error');
+                                        }
+                                        setEmailLoading(false);
+                                      }}
+                                      disabled={emailLoading}
+                                      className="py-1 px-3 bg-neutral-900 hover:bg-neutral-800 text-white border border-white/5 font-mono text-[9px] rounded uppercase cursor-pointer disabled:opacity-50"
+                                    >
+                                      {emailLoading ? '...' : type.replace('_', ' ')}
+                                    </button>
+                                  ))}
+                                </div>
+                                {generatedEmail && (
+                                  <div className="relative bg-black/60 border border-white/5 rounded-lg p-4 text-xs text-gray-300 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
+                                    {generatedEmail}
+                                    <button
+                                      onClick={() => { navigator.clipboard.writeText(generatedEmail); onShowToast('Email copied!', 'success'); }}
+                                      className="absolute top-2 right-2 py-1 px-2 bg-neutral-800 hover:bg-neutral-700 text-[8px] font-mono uppercase rounded border border-white/5 cursor-pointer"
+                                    >
+                                      Copy
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}

@@ -19,6 +19,8 @@ import {
 } from '@/data/mockData';
 import { getBackendMetrics, getBackendApplications, updateBackendApplication, getBackendPayments, verifyBackendPayment } from '@/lib/backend';
 
+export type StudentStage = 'APPLIED' | 'ONBOARDED' | 'INTERNSHIP' | 'COMPLETED' | 'CERTIFICATION_READY' | 'PAYMENT_SUBMITTED' | 'PAYMENT_VERIFIED' | 'CERTIFICATE_ISSUED';
+
 export default function Home() {
   const [loading, setLoading] = useState(true);
 
@@ -68,6 +70,21 @@ export default function Home() {
     createdAt: string; approvedAt: string | null;
     student: { fullName: string; email: string };
   }>>([]);
+
+  const [studentStages, setStudentStages] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem('hellware_student_stages');
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+
+  const handleUpdateStudentStage = (email: string, stage: string) => {
+    setStudentStages(prev => {
+      const next = { ...prev, [email]: stage };
+      localStorage.setItem('hellware_student_stages', JSON.stringify(next));
+      return next;
+    });
+  };
 
   const fetchBackendData = useCallback(async (token: string) => {
     try {
@@ -331,6 +348,8 @@ export default function Home() {
                 onCommitSubmission={handleStudentSubmitProject}
                 onToggleMilestone={handleToggleStudentMilestone}
                 onShowToast={showToast}
+                studentStage={studentStages[userEmail] || 'APPLIED'}
+                onUpdateStage={(s) => handleUpdateStudentStage(userEmail, s)}
               />
             )}
 
@@ -357,6 +376,8 @@ export default function Home() {
                 onBackendUpdateApp={handleBackendUpdateApp}
                 backendPayments={backendPayments}
                 onBackendVerifyPayment={handleBackendVerifyPayment}
+                studentStages={studentStages}
+                onUpdateStudentStage={handleUpdateStudentStage}
               />
             )}
 

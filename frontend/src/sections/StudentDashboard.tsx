@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Award, Shield, FileText, CheckSquare, Clock, Send, Code, ExternalLink, Lock,
@@ -29,15 +29,26 @@ interface StudentDashboardProps {
   onCommitSubmission: (sub: Partial<Submission>) => void;
   onToggleMilestone: (mid: string) => void;
   onShowToast: (msg: string, type: 'success' | 'warn' | 'error') => void;
+  studentStage: string;
+  onUpdateStage: (stage: string) => void;
 }
 
 export default function StudentDashboard({
   userEmail, onLogout, onNavigateToPublic,
-  assignedProject, submissions, onCommitSubmission, onToggleMilestone, onShowToast
+  assignedProject, submissions, onCommitSubmission, onToggleMilestone, onShowToast,
+  studentStage, onUpdateStage
 }: StudentDashboardProps) {
 
   // Active dashboard tab state
   const [activeTab, setActiveTab] = useState<'HOME' | 'OFFER_LETTER' | 'PROJECT' | 'WEEKLY_REPORTS' | 'SUBMIT' | 'HISTORY' | 'RESOURCES' | 'BADGES' | 'REFERRAL' | 'CONTRIBUTION' | 'SETTINGS' | 'APPLY_MORE'>('HOME');
+
+  const certificationVisible = studentStage === 'CERTIFICATION_READY' || studentStage === 'PAYMENT_SUBMITTED' || studentStage === 'PAYMENT_VERIFIED' || studentStage === 'CERTIFICATE_ISSUED';
+  const badgesVisible = studentStage === 'INTERNSHIP' || studentStage === 'COMPLETED' || certificationVisible;
+
+  useEffect(() => {
+    if (activeTab === 'CONTRIBUTION' && !certificationVisible) setActiveTab('HOME');
+    if (activeTab === 'BADGES' && !badgesVisible) setActiveTab('HOME');
+  }, [studentStage]);
 
   // Active internships list for the student
   const [activeInternships, setActiveInternships] = useState<StudentProject[]>([
@@ -315,11 +326,15 @@ export default function StudentDashboard({
               { id: 'SUBMIT', label: 'SUBMIT WORK', icon: <Send className="w-4 h-4" /> },
               { id: 'HISTORY', label: 'PAST SUBMISSIONS', icon: <FileText className="w-4 h-4" /> },
               { id: 'RESOURCES', label: 'SYLLABUS RESOURCES', icon: <BookOpen className="w-4 h-4" /> },
-              { id: 'BADGES', label: isCertificateAddedInWebsite ? 'BADGES & CERTIFICATE' : 'COHORT BADGES', icon: <Award className="w-4 h-4" /> },
+              ...(studentStage === 'INTERNSHIP' || studentStage === 'COMPLETED' || studentStage === 'CERTIFICATION_READY' || studentStage === 'PAYMENT_SUBMITTED' || studentStage === 'PAYMENT_VERIFIED' || studentStage === 'CERTIFICATE_ISSUED' ? [{
+                id: 'BADGES' as const, label: isCertificateAddedInWebsite ? 'BADGES & CERTIFICATE' : 'COHORT BADGES', icon: <Award className="w-4 h-4" />
+              }] : []),
               { id: 'REFERRAL', label: 'REFERRALS HUB', icon: <Link className="w-4 h-4" /> },
-              { id: 'CONTRIBUTION', label: 'CERTIFICATE PAYMENT', icon: <Info className="w-4 h-4" /> },
+              ...(studentStage === 'CERTIFICATION_READY' || studentStage === 'PAYMENT_SUBMITTED' || studentStage === 'PAYMENT_VERIFIED' || studentStage === 'CERTIFICATE_ISSUED' ? [{
+                id: 'CONTRIBUTION' as const, label: 'CERTIFICATE PAYMENT', icon: <Info className="w-4 h-4" />
+              }] : []),
               { id: 'SETTINGS', label: 'PORTAL SETTINGS', icon: <Settings className="w-4 h-4" /> },
-            ].map((lnk) => {
+            ].filter(Boolean).map((lnk) => {
               const isActive = activeTab === lnk.id;
               return (
                 <button
