@@ -52,7 +52,9 @@ Public/student:
 Admin/management:
 
 - `GET /api/admin/metrics`
+- `GET /api/admin/applications`
 - `PATCH /api/admin/applications/[id]`
+- `GET /api/admin/payments`
 - `PATCH /api/admin/payments/[id]/verify`
 
 Health:
