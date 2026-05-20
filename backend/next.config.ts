@@ -1,7 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  outputFileTracingRoot: process.env.VERCEL ? process.cwd() : undefined,
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
