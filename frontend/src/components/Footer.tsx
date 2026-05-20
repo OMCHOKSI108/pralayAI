@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Shield, ArrowUp, Terminal, FileText, Lock, RefreshCw, Award } from 'lucide-react';
+import { Shield, ArrowUp, Terminal, FileText, Lock, RefreshCw, Award, Mail } from 'lucide-react';
 import HellwareLogo from './HellwareLogo';
 
 interface FooterProps {
@@ -79,7 +79,13 @@ export default function Footer({ onNavigate }: FooterProps) {
           <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
             <span>© {new Date().getFullYear()} HELLWARE. COHORT ROSTER VERIFICATIONS ARE ENCRYPTED.</span>
             <div className="hidden sm:inline w-[1px] h-3 bg-white/10" />
-            <span className="text-[#E94560] font-bold">MUTED RED BRAND PRESET ACTIVE</span>
+            <a
+              href="mailto:hellware@atomicmail.io"
+              className="inline-flex items-center gap-1.5 text-[#E94560] font-bold hover:text-white transition-colors"
+            >
+              <Mail className="h-3.5 w-3.5" />
+              hellware@atomicmail.io
+            </a>
           </div>
 
           <button
