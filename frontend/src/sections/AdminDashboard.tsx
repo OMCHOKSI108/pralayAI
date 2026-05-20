@@ -60,7 +60,7 @@ interface AdminDashboardProps {
   studentStages?: Record<string, string>;
   onUpdateStudentStage?: (email: string, stage: string) => void;
   timelines?: Record<string, TimelineStep[]>;
-  onAdvanceTimeline?: (email: string, stepId: string) => Promise<{ success: boolean; error?: string }>;
+  onAdvanceTimeline?: (email: string, stepId: string, autoDelay?: number) => Promise<{ success: boolean; error?: string }>;
   getStudentTimeline?: (email: string) => TimelineStep[];
 }
 
@@ -1405,10 +1405,14 @@ export default function AdminDashboard({
                                             <button
                                               onClick={async () => {
                                                 setSendingStepEmail(step.id);
-                                                const result = await onAdvanceTimeline?.(selected.email, step.id);
+                                                const delay = step.id === 'payment_verified' ? 60000 : undefined;
+                                                const result = await onAdvanceTimeline?.(selected.email, step.id, delay);
                                                 setSendingStepEmail(null);
                                                 if (result?.success) {
-                                                  onShowToast(`Automated: ${step.label} — email sent + dashboard unlocked`, 'success');
+                                                  const msg = step.id === 'payment_verified'
+                                                    ? `Payment verified! Certificate will auto-issue in ~60s (simulating 1-day delay).`
+                                                    : `Automated: ${step.label} — email sent + dashboard unlocked`;
+                                                  onShowToast(msg, 'success');
                                                 } else {
                                                   onShowToast(result?.error || 'Failed', 'error');
                                                 }

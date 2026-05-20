@@ -123,7 +123,9 @@ export default function Home() {
     return timelines[email];
   }, [timelines]);
 
-  const handleAdvanceTimeline = useCallback(async (email: string, stepId: string) => {
+  const AUTO_CERTIFICATE_DELAY_MS = 60000;
+
+  const handleAdvanceTimeline = useCallback(async (email: string, stepId: string, autoAdvanceDelay?: number) => {
     const currentSteps = timelines[email] || DEFAULT_TIMELINE.map(s => ({ ...s }));
     const step = currentSteps.find(s => s.id === stepId);
     if (!step || step.status !== 'PENDING') return { success: false, error: 'Step already completed' };
@@ -171,6 +173,13 @@ export default function Home() {
           return next;
         });
         handleUpdateStudentStage(email, stageForStep(stepId));
+
+        if (autoAdvanceDelay && autoAdvanceDelay > 0) {
+          setTimeout(() => {
+            handleAdvanceTimeline(email, 'certificate_issued');
+          }, autoAdvanceDelay);
+        }
+
         return { success: true };
       }
       return { success: false, error: 'Email send failed' };

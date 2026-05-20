@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY || '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';
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 const HR_NAME = 'Om Choksi';
@@ -8,6 +8,9 @@ const COMPANY = 'Hellware Technology Solutions';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!GROQ_API_KEY) {
+      return NextResponse.json({ success: false, error: 'GROQ_API_KEY not configured' }, { status: 500 });
+    }
     const body = await request.json();
     const { studentName, studentEmail, internshipDomain, emailType } = body;
 

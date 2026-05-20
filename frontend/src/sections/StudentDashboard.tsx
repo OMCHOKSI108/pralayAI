@@ -145,6 +145,7 @@ export default function StudentDashboard({
   const [isCertificateAddedInWebsite, setIsCertificateAddedInWebsite] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [localMockApproved, setLocalMockApproved] = useState(false);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
   const [utrNumber, setUtrNumber] = useState('');
   const [cryptoTxHash, setCryptoTxHash] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'UPI' | 'CRYPTO' | null>(null);
@@ -1093,6 +1094,47 @@ export default function StudentDashboard({
                       className="w-full h-16 bg-black border border-white/5 rounded p-3 text-xs text-white font-mono placeholder:text-gray-600 focus:outline-none" 
                     />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!newReportForm.achievements) {
+                        onShowToast('Write some bullet points first, then AI will expand them.', 'warn');
+                        return;
+                      }
+                      setAiSummaryLoading(true);
+                      try {
+                        const res = await fetch('/api/llm/weekly-report', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            studentName: 'Alex Mercer',
+                            domain: currentInternship.domain,
+                            week: newReportForm.weekNum,
+                            hoursLogged: newReportForm.hoursLogged,
+                            locCount: newReportForm.locCount,
+                            achievements: newReportForm.achievements,
+                            blockers: newReportForm.blockers,
+                            projectName: currentInternship.title,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setNewReportForm(prev => ({ ...prev, achievements: data.data.summary }));
+                          onShowToast('AI-generated professional summary ready!', 'success');
+                        } else {
+                          onShowToast('AI generation failed, using your text as-is.', 'warn');
+                        }
+                      } catch {
+                        onShowToast('AI generation failed, using your text as-is.', 'warn');
+                      }
+                      setAiSummaryLoading(false);
+                    }}
+                    disabled={aiSummaryLoading}
+                    className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 font-bold text-[9px] font-mono uppercase tracking-widest text-center cursor-pointer rounded-[4px] disabled:opacity-50"
+                  >
+                    {aiSummaryLoading ? 'Generating with AI...' : '✨ Generate Professional Summary (AI)'}
+                  </button>
 
                   <button 
                     type="submit"
