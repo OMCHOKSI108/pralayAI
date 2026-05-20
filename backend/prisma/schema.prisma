@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+  MANAGEMENT
+}
+
+enum AppStatus {
+  UNREGISTERED
+  APPLIED
+  APPROVED
+  REJECTED
+  VERIFIED
+}
+
+enum PaymentStatus {
+  PENDING
+  REVIEW
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STUDENT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile StudentProfile?
+}
+
+model StudentProfile {
+  id        String    @id @default(uuid())
+  userId    String?   @unique
+  fullName  String
+  email     String    @unique
+  phone     String?
+  college   String?
+  gradYear  String?
+  skills    String[]
+  status    AppStatus @default(UNREGISTERED)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user     User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  payments PaymentProof[]
+}
+
+model PaymentProof {
+  id              String        @id @default(uuid())
+  studentId       String
+  student         StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amountPaid      Float
+  transactionHash String        @unique
+  screenshotUrl   String
+  status          PaymentStatus @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  approvedAt      DateTime?
+}

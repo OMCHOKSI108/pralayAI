@@ -5,7 +5,7 @@ Project-based engineering and experiential learning platform for students.
 ## Architecture
 
 - **Frontend**: Next.js 16 (App Router) on Vercel
-- **Backend**: Next.js API Routes (serverless)
+- **Backend**: Separate Next.js App Router app in `backend/` for admin/API deployment
 - **Database**: Supabase (PostgreSQL + Auth + Storage)
 - **Email**: Resend + React Email
 - **Payments**: Razorpay

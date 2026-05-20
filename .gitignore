@@ -4,6 +4,8 @@ node_modules/
 .pnp
 .pnp.js
 .yarn/*
+google.json
+
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
@@ -53,6 +55,8 @@ ENV/
 .env.local
 .env.*.local
 .env.example
+!backend/.env.example
+!frontend/.env.frontend.example
 
 # Next.js
 .next/
