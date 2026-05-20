@@ -1,5 +1,9 @@
 import { StudentProject, Certificate } from '@/data/mockData';
 
+const HR_NAME = 'Om Choksi';
+const COMPANY = 'Hellware Technology Solutions';
+const COMPANY_ADDRESS = 'Vadodara, Gujarat, India';
+
 /**
  * Robust print helper executing pixel-perfect black-on-white documents and certificates
  * using isolated iframe printing to support OS-native "Save to PDF" with zero external assets.
@@ -297,236 +301,533 @@ export function printProjectDefinition(project: StudentProject, studentName: str
 }
 
 export function printCertificate(cert: Certificate, studentName: string) {
-  const dateStr = cert.completionDate || "May 20, 2026";
+  const dateStr = cert.completionDate || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const duration = "2-Month";
   const startDate = "June 1, 2026";
   const endDateStr = "July 31, 2026";
-  const certId = cert.id || "HW-CERT-2026-0421";
-  
+  const certId = cert.id || `HW-CERT-${Date.now().toString(36).toUpperCase()}`;
+  const verifyUrl = `hellware.in/verify/${certId}`;
+
   const htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Certificate Of Completion - ${studentName}</title>
+      <title>Certificate of Completion - ${studentName}</title>
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Inter:wght@400;500;700;900&display=swap');
-        
-        @page {
-          size: A4 landscape;
-          margin: 15mm;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+        @page { size: A4 landscape; margin: 12mm; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
           font-family: 'Inter', sans-serif;
-          color: #000000;
-          background-color: #ffffff;
-          margin: 0;
-          padding: 0;
+          background: #ffffff;
           display: flex;
           align-items: center;
           justify-content: center;
-          height: 100vh;
+          min-height: 100vh;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
 
-        .cert-frame {
-          border: 1px solid #000000;
-          padding: 40px 50px;
+        .certificate {
           width: 100%;
-          max-width: 260mm;
-          box-sizing: border-box;
+          max-width: 277mm;
+          background: #ffffff;
           position: relative;
+          overflow: hidden;
+        }
+
+        .border-frame {
+          border: 2px solid #1a1a1a;
+          padding: 32px 40px;
+          position: relative;
+        }
+
+        .border-frame::before {
+          content: '';
+          position: absolute;
+          top: 8px; left: 8px; right: 8px; bottom: 8px;
+          border: 1px solid #d4d4d4;
+          pointer-events: none;
+        }
+
+        .gold-accent {
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #1a1a1a 0%, #555555 50%, #1a1a1a 100%);
         }
 
         .header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 35px;
+          margin-bottom: 24px;
         }
 
-        .logo-box {
+        .logo-section {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .logo-icon {
+          width: 36px;
+          height: 36px;
+        }
+
+        .company-name {
+          font-size: 18pt;
+          font-weight: 900;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          color: #1a1a1a;
+        }
+
+        .company-sub {
+          font-size: 7pt;
+          font-weight: 500;
+          color: #666;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+        }
+
+        .cert-meta {
+          text-align: right;
+          font-size: 7.5pt;
+          color: #555;
+          line-height: 1.6;
+        }
+
+        .cert-meta strong { color: #1a1a1a; }
+
+        .badge-row {
+          text-align: center;
+          margin: 20px 0 10px;
+        }
+
+        .badge {
+          display: inline-block;
+          border: 1px solid #1a1a1a;
+          padding: 5px 24px;
+          font-size: 7.5pt;
+          font-weight: 700;
+          letter-spacing: 3px;
+          text-transform: uppercase;
+          color: #1a1a1a;
+        }
+
+        .title {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: 28pt;
+          font-weight: 700;
+          text-align: center;
+          color: #1a1a1a;
+          margin: 8px 0 4px;
+          letter-spacing: 0.5px;
+        }
+
+        .title-line {
+          width: 80px;
+          height: 2px;
+          background: #1a1a1a;
+          margin: 8px auto;
+        }
+
+        .pre-text {
+          text-align: center;
+          font-size: 9pt;
+          color: #444;
+          font-weight: 400;
+          margin: 10px 0 4px;
+        }
+
+        .student-name {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: 36pt;
+          font-weight: 700;
+          text-align: center;
+          color: #1a1a1a;
+          margin: 4px 0;
+          letter-spacing: 0.5px;
+        }
+
+        .main-text {
+          text-align: center;
+          font-size: 9.5pt;
+          line-height: 1.9;
+          color: #333;
+          max-width: 220mm;
+          margin: 10px auto 16px;
+          padding: 0 20px;
+        }
+
+        .main-text strong { color: #1a1a1a; }
+
+        .details-grid {
+          display: flex;
+          justify-content: center;
+          gap: 40px;
+          margin: 12px 0 20px;
+          font-size: 8.5pt;
+          color: #444;
+        }
+
+        .details-grid div { text-align: center; }
+        .details-grid strong { display: block; color: #1a1a1a; font-size: 9pt; margin-bottom: 2px; }
+
+        .footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid #d4d4d4;
+        }
+
+        .signature-area {
+          width: 260px;
+        }
+
+        .signature-line {
+          border-bottom: 1.5px solid #1a1a1a;
+          margin-bottom: 6px;
+          height: 32px;
+        }
+
+        .sig-name {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: 14pt;
+          font-weight: 600;
+          color: #1a1a1a;
+          margin-bottom: 2px;
+        }
+
+        .sig-title {
+          font-size: 7.5pt;
+          color: #555;
+          line-height: 1.5;
+        }
+
+        .sig-title strong { color: #1a1a1a; }
+
+        .verify-section {
           display: flex;
           align-items: center;
           gap: 12px;
         }
 
-        .logo-text {
-          font-family: 'Inter', sans-serif;
-          font-weight: 950;
-          font-size: 16pt;
-          letter-spacing: 1.5px;
-          color: #000000;
-          margin: 0;
-          text-transform: uppercase;
-        }
-
-        .cert-id {
-          font-family: 'Inter', sans-serif;
-          font-size: 8.5pt;
-          color: #111111;
-          text-align: right;
-          line-height: 1.4;
-        }
-
-        h1 {
-          font-family: 'Inter', sans-serif;
-          font-size: 12pt;
-          font-weight: 700;
-          letter-spacing: 4px;
-          text-transform: uppercase;
-          margin-top: 0;
-          margin-bottom: 25px;
-          color: #000000;
-        }
-
-        .student-name {
-          font-family: 'Playfair Display', Georgia, serif;
-          font-weight: 700;
-          font-size: 32pt;
-          margin: 20px 0;
-          color: #000000;
-          text-align: center;
-        }
-
-        .cert-text {
-          font-family: 'Inter', sans-serif;
-          font-size: 11pt;
-          line-height: 1.8;
-          color: #000000;
-          max-width: 220mm;
-          margin: 20px auto 40px auto;
-          text-align: center;
-        }
-
-        .footer-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          margin-top: 40px;
-          border-top: 1px solid #000000;
-          padding-top: 25px;
-        }
-
-        .signature-col {
-          text-align: left;
-          width: 250px;
-        }
-
-        .sig-image-text {
-          font-family: 'Playfair Display', Georgia, serif;
-          font-style: italic;
-          font-size: 17pt;
-          color: #000000;
-          margin-bottom: 6px;
-        }
-
-        .signature-line {
-          border-bottom: 1px solid #000000;
-          margin-bottom: 8px;
-        }
-
-        .signatory-label {
-          font-family: 'Inter', sans-serif;
-          font-size: 8pt;
-          color: #444444;
-          line-height: 1.4;
-        }
-
-        .qr-col {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          text-align: left;
-        }
-
-        /* Minimal QR Block */
-        .qr-box {
-          width: 55px;
-          height: 55px;
-          background-color: #000000;
-          padding: 4px;
+        .verify-qr {
+          width: 52px;
+          height: 52px;
           display: grid;
-          grid-template-columns: repeat(6, 1fr);
+          grid-template-columns: repeat(7, 1fr);
           gap: 1px;
-          box-sizing: border-box;
+          background: #1a1a1a;
+          padding: 3px;
         }
 
-        .qr-px-w {
-          background-color: #ffffff;
+        .qr-w { background: #fff; }
+        .qr-b { background: #1a1a1a; }
+
+        .verify-text {
+          font-size: 6.5pt;
+          color: #555;
+          line-height: 1.5;
         }
 
-        .qr-px-b {
-          background-color: #000000;
+        .verify-text strong {
+          color: #1a1a1a;
+          display: block;
+          font-size: 7pt;
+          text-transform: uppercase;
         }
 
-        .qr-info {
-          font-family: 'Inter', sans-serif;
-          font-size: 7.5pt;
-          color: #444444;
-          line-height: 1.4;
-        }
-
-        .qr-info strong {
-          color: #000000;
+        .footer-note {
+          text-align: center;
+          font-size: 6pt;
+          color: #999;
+          margin-top: 12px;
+          letter-spacing: 1px;
+          text-transform: uppercase;
         }
       </style>
     </head>
     <body>
-      <div class="cert-frame">
-        <div class="header">
-          <div class="logo-box">
-            <svg width="24" height="24" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="0" y="0" width="14" height="14" rx="1" fill="#000000" />
-              <rect x="18" y="0" width="14" height="14" rx="1" fill="#000000" />
-              <rect x="0" y="18" width="14" height="14" rx="1" fill="#000000" />
-              <rect x="36" y="18" width="14" height="14" rx="1" fill="#000000" />
-              <rect x="0" y="36" width="14" height="14" rx="1" fill="#000000" />
-              <rect x="18" y="36" width="14" height="14" rx="1" fill="#000000" />
-            </svg>
-            <h3 class="logo-text">Hellware</h3>
-          </div>
-          <div class="cert-id">
-            Issued on: ${dateStr}<br>
-            Certificate ID: ${certId}
-          </div>
-        </div>
+      <div class="certificate">
+        <div class="border-frame">
+          <div class="gold-accent"></div>
 
-        <div style="text-align: center; margin-top: 30px;">
-          <h1>Certificate Of Completion</h1>
-          
+          <div class="header">
+            <div class="logo-section">
+              <svg class="logo-icon" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="14" height="14" rx="2" fill="#1a1a1a"/>
+                <rect x="20" y="2" width="14" height="14" rx="2" fill="#1a1a1a"/>
+                <rect x="2" y="20" width="14" height="14" rx="2" fill="#1a1a1a"/>
+                <rect x="38" y="20" width="14" height="14" rx="2" fill="#1a1a1a"/>
+                <rect x="2" y="38" width="14" height="14" rx="2" fill="#1a1a1a"/>
+                <rect x="20" y="38" width="14" height="14" rx="2" fill="#1a1a1a"/>
+              </svg>
+              <div>
+                <div class="company-name">Hellware</div>
+                <div class="company-sub">Technology Solutions</div>
+              </div>
+            </div>
+            <div class="cert-meta">
+              <strong>CERTIFICATE ID</strong><br>
+              ${certId}<br>
+              <strong>ISSUED</strong> ${dateStr}
+            </div>
+          </div>
+
+          <div class="badge-row">
+            <span class="badge">Certificate of Completion</span>
+          </div>
+
+          <div class="title-line"></div>
+
+          <div class="pre-text">This is to proudly certify that</div>
           <div class="student-name">${studentName}</div>
-          
-          <div class="cert-text">
-            This is to certify that <strong>${studentName}</strong> has successfully completed the <strong>${duration}</strong> Remote Internship Program in the domain of <strong>${cert.domain}</strong> at Hellware Technology Solutions having completed the project "<strong>${cert.projectName}</strong>" during the period <strong>${startDate}</strong> to <strong>${endDateStr}</strong>.
-          </div>
-        </div>
 
-        <div class="footer-row">
-          <div class="signature-col">
-            <div class="sig-image-text">Thorne Vance</div>
-            <div class="signature-line"></div>
-            <div class="signatory-label">
-              <strong>Thorne Vance</strong><br>
-              Head of Engineering Internships<br>
-              Hellware Technology Solutions
-            </div>
+          <div class="main-text">
+            has successfully completed the <strong>${duration} Remote Internship Program</strong> in
+            <strong>${cert.domain}</strong> at ${COMPANY}, having demonstrated exceptional skill and diligence
+            in the execution of the project "<strong>${cert.projectName}</strong>"
+            during the period <strong>${startDate}</strong> to <strong>${endDateStr}</strong>.
           </div>
 
-          <div class="qr-col">
-            <div class="qr-box">
-              ${Array.from({ length: 36 }).map((_, r) => `
-                <div class="${r % 3 === 0 || r % 5 === 1 ? 'qr-px-w' : 'qr-px-b'}"></div>
-              `).join('')}
+          <div class="details-grid">
+            <div><strong>Duration</strong>${duration}</div>
+            <div><strong>Domain</strong>${cert.domain}</div>
+            <div><strong>Project</strong>${cert.projectName}</div>
+            <div><strong>Completed</strong>${endDateStr}</div>
+          </div>
+
+          <div class="footer">
+            <div class="signature-area">
+              <div class="signature-line"></div>
+              <div class="sig-name">${HR_NAME}</div>
+              <div class="sig-title">
+                <strong>HR Manager</strong><br>
+                ${COMPANY}<br>
+                ${COMPANY_ADDRESS}
+              </div>
             </div>
-            <div class="qr-info">
-              <strong>SECURED COHORT DEPLOY</strong><br>
-              Verification Link:<br>
-              <span style="font-family: monospace;">hellware.in/verify/${certId}</span>
+
+            <div class="verify-section">
+              <div class="verify-qr">
+                ${Array.from({ length: 49 }).map((_, i) =>
+                  `<div class="${i % 7 === 0 || i % 5 === 2 || i === 24 ? 'qr-b' : 'qr-w'}"></div>`
+                ).join('')}
+              </div>
+              <div class="verify-text">
+                <strong>Verify Certificate</strong>
+                Scan or visit<br>
+                <span style="font-family:monospace;font-size:7pt;color:#1a1a1a;">${verifyUrl}</span>
+              </div>
             </div>
           </div>
+
+          <div class="footer-note">
+            This certificate is a testament to the recipient's dedication, technical acumen, and professional growth.
+          </div>
         </div>
+      </div>
+    </body>
+    </html>
+  `.trim();
+
+  executeIframePrint(htmlContent);
+}
+
+export function printLOR(studentName: string, domain: string, projectName: string, duration: string = '2-Month') {
+  const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const lorId = `HW-LOR-${Date.now().toString(36).toUpperCase()}`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Letter of Recommendation - ${studentName}</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        @page { size: A4 portrait; margin: 22mm 25mm; }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+          font-family: 'Inter', sans-serif;
+          background: #ffffff;
+          color: #1a1a1a;
+          font-size: 10.5pt;
+          line-height: 1.7;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 30px;
+          padding-bottom: 20px;
+          border-bottom: 2px solid #1a1a1a;
+        }
+
+        .logo-area {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .company-title {
+          font-size: 16pt;
+          font-weight: 900;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+        }
+
+        .company-subtitle {
+          font-size: 7pt;
+          color: #666;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .doc-meta {
+          text-align: right;
+          font-size: 7.5pt;
+          color: #555;
+          line-height: 1.6;
+        }
+
+        .doc-meta strong { color: #1a1a1a; }
+
+        .date-line {
+          text-align: right;
+          font-size: 9pt;
+          color: #444;
+          margin-bottom: 20px;
+        }
+
+        .subject-line {
+          font-size: 10pt;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          margin-bottom: 20px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #d4d4d4;
+        }
+
+        .salutation {
+          font-size: 10.5pt;
+          margin-bottom: 14px;
+        }
+
+        .body-text {
+          text-align: justify;
+          margin-bottom: 12px;
+        }
+
+        .signature-block {
+          margin-top: 36px;
+          padding-top: 20px;
+          border-top: 1px solid #d4d4d4;
+        }
+
+        .sig-name {
+          font-family: 'Playfair Display', Georgia, serif;
+          font-size: 16pt;
+          font-weight: 600;
+          color: #1a1a1a;
+          margin-bottom: 2px;
+        }
+
+        .sig-title {
+          font-size: 9pt;
+          color: #555;
+          line-height: 1.5;
+        }
+
+        .sig-title strong { color: #1a1a1a; }
+
+        .footer-note {
+          margin-top: 30px;
+          font-size: 7pt;
+          color: #999;
+          text-align: center;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          border-top: 1px solid #eee;
+          padding-top: 12px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo-area">
+          <svg width="32" height="32" viewBox="0 0 54 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="2" width="14" height="14" rx="2" fill="#1a1a1a"/>
+            <rect x="20" y="2" width="14" height="14" rx="2" fill="#1a1a1a"/>
+            <rect x="2" y="20" width="14" height="14" rx="2" fill="#1a1a1a"/>
+            <rect x="38" y="20" width="14" height="14" rx="2" fill="#1a1a1a"/>
+            <rect x="2" y="38" width="14" height="14" rx="2" fill="#1a1a1a"/>
+            <rect x="20" y="38" width="14" height="14" rx="2" fill="#1a1a1a"/>
+          </svg>
+          <div>
+            <div class="company-title">Hellware</div>
+            <div class="company-subtitle">Technology Solutions</div>
+          </div>
+        </div>
+        <div class="doc-meta">
+          <strong>REF:</strong> ${lorId}<br>
+          <strong>DATE:</strong> ${dateStr}
+        </div>
+      </div>
+
+      <div class="date-line">${dateStr}</div>
+
+      <div class="subject-line">Letter of Recommendation</div>
+
+      <p class="salutation">To Whom It May Concern,</p>
+
+      <p class="body-text">
+        I am pleased to write this letter of recommendation for <strong>${studentName}</strong>, who has successfully completed a <strong>${duration} Remote Internship Program</strong> in the domain of <strong>${domain}</strong> at ${COMPANY}.
+      </p>
+
+      <p class="body-text">
+        During the internship, ${studentName} demonstrated exceptional technical aptitude, professional maturity, and a strong commitment to excellence. They were entrusted with the project "<strong>${projectName}</strong>", which they executed with remarkable precision, delivering high-quality code, comprehensive documentation, and innovative solutions to complex problems.
+      </p>
+
+      <p class="body-text">
+        ${studentName} consistently exceeded expectations in areas including analytical reasoning, collaborative problem-solving, and independent research. Their ability to grasp advanced concepts quickly and apply them effectively in real-world scenarios was truly impressive. They showed great initiative in optimizing workflows and contributed meaningfully to our technical discussions.
+      </p>
+
+      <p class="body-text">
+        Beyond technical skills, ${studentName} displayed outstanding professionalism, punctuality, and a collaborative spirit that made them a valuable member of our team. They communicated effectively with peers and mentors alike, and demonstrated leadership potential that will serve them well in their future endeavors.
+      </p>
+
+      <p class="body-text">
+        I am confident that ${studentName} possesses the skills, dedication, and intellectual curiosity to excel in any academic or professional pursuit they choose to undertake. I recommend them without reservation and would be happy to provide further details if needed.
+      </p>
+
+      <p class="body-text">Please feel free to contact me at omchoksi.pro@gmail.com for any additional information.</p>
+
+      <div class="signature-block">
+        <div class="sig-name">${HR_NAME}</div>
+        <div class="sig-title">
+          <strong>HR Manager</strong><br>
+          ${COMPANY}<br>
+          ${COMPANY_ADDRESS}
+        </div>
+      </div>
+
+      <div class="footer-note">
+        This letter is issued by Hellware Technology Solutions and reflects our genuine assessment of the candidate.
       </div>
     </body>
     </html>

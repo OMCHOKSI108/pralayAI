@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
 export async function POST(request: NextRequest) {
   try {
-    if (!resend) {
-      return NextResponse.json({ success: false, error: 'Resend not configured' }, { status: 500 });
-    }
-
     const body = await request.json();
     const { to, subject, html } = body;
 
@@ -16,19 +18,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing required fields: to, subject, html' }, { status: 400 });
     }
 
-    const { data, error } = await resend.emails.send({
-      from: 'hellware@atomicmail.io',
-      to: Array.isArray(to) ? to : [to],
+    const mailOptions = {
+      from: `"Om Choksi - HR, Hellware" <${process.env.SMTP_USER}>`,
+      to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       html,
-    });
+    };
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
+    await transporter.sendMail(mailOptions);
 
-    return NextResponse.json({ success: true, data: { id: data?.id } });
+    return NextResponse.json({ success: true, data: { message: 'Email sent' } });
   } catch (error) {
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Failed to send email' }, { status: 500 });
   }
 }

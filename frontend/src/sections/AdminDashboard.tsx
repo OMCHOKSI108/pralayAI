@@ -60,8 +60,7 @@ interface AdminDashboardProps {
   studentStages?: Record<string, string>;
   onUpdateStudentStage?: (email: string, stage: string) => void;
   timelines?: Record<string, TimelineStep[]>;
-  onSendTimelineEmail?: (email: string, stepId: string) => Promise<{ success: boolean; error?: string }>;
-  onReflectTimelineStep?: (email: string, stepId: string) => void;
+  onAdvanceTimeline?: (email: string, stepId: string) => Promise<{ success: boolean; error?: string }>;
   getStudentTimeline?: (email: string) => TimelineStep[];
 }
 
@@ -75,7 +74,7 @@ export default function AdminDashboard({
   authToken, backendApplications, backendMetrics, onBackendUpdateApp,
   backendPayments, onBackendVerifyPayment,
   studentStages, onUpdateStudentStage,
-  timelines, onSendTimelineEmail, onReflectTimelineStep, getStudentTimeline
+  timelines, onAdvanceTimeline, getStudentTimeline
 }: AdminDashboardProps) {
 
   // Selected sub view paths
@@ -1369,14 +1368,13 @@ export default function AdminDashboard({
                               <div className="space-y-2">
                                 {steps.map((step, idx) => {
                                   const isActive = step.status === 'PENDING';
-                                  const isSent = step.status === 'EMAIL_SENT';
                                   const isReflected = step.status === 'REFLECTED';
-                                  const prevDone = idx === 0 || steps[idx - 1].status === 'EMAIL_SENT' || steps[idx - 1].status === 'REFLECTED';
+                                  const prevDone = idx === 0 || steps[idx - 1].status === 'REFLECTED';
 
                                   return (
                                     <div key={step.id} className={`p-3 rounded-lg border text-left ${
                                       isReflected ? 'bg-emerald-500/5 border-emerald-500/20' :
-                                      isSent ? 'bg-amber-500/5 border-amber-500/20' :
+                                      isActive && prevDone ? 'bg-amber-500/5 border-amber-500/20' :
                                       prevDone ? 'bg-neutral-900/40 border-white/5' :
                                       'bg-neutral-950 border-white/5 opacity-40'
                                     }`}>
@@ -1385,21 +1383,20 @@ export default function AdminDashboard({
                                           <div className="flex items-center gap-2">
                                             <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-mono font-bold shrink-0 ${
                                               isReflected ? 'bg-emerald-500 text-black' :
-                                              isSent ? 'bg-amber-500 text-black' :
                                               'bg-gray-700 text-gray-400'
                                             }`}>
-                                              {isReflected ? '✓' : isSent ? '✉' : step.step + 1}
+                                              {isReflected ? '✓' : step.step + 1}
                                             </span>
                                             <span className={`font-bold text-xs font-mono uppercase ${
                                               isReflected ? 'text-emerald-400' :
-                                              isSent ? 'text-amber-400' :
-                                              'text-white'
+                                              isActive && prevDone ? 'text-amber-400' :
+                                              'text-gray-500'
                                             }`}>{step.label}</span>
                                             <span className="text-[8px] font-mono text-gray-600">({step.delay})</span>
                                           </div>
                                           <p className="text-[10px] text-gray-500 mt-1 ml-7">{step.description}</p>
-                                          {isSent && step.sentAt && (
-                                            <p className="text-[8px] font-mono text-gray-600 mt-1 ml-7">Sent: {new Date(step.sentAt).toLocaleString()}</p>
+                                          {isReflected && step.sentAt && (
+                                            <p className="text-[8px] font-mono text-emerald-600 mt-1 ml-7">Sent & Reflected: {new Date(step.sentAt).toLocaleString()}</p>
                                           )}
                                         </div>
 
@@ -1408,30 +1405,22 @@ export default function AdminDashboard({
                                             <button
                                               onClick={async () => {
                                                 setSendingStepEmail(step.id);
-                                                const result = await onSendTimelineEmail?.(selected.email, step.id);
+                                                const result = await onAdvanceTimeline?.(selected.email, step.id);
                                                 setSendingStepEmail(null);
-                                                if (result?.success) onShowToast(`Email sent: ${step.label}`, 'success');
-                                                else onShowToast(result?.error || 'Failed', 'error');
+                                                if (result?.success) {
+                                                  onShowToast(`Automated: ${step.label} — email sent + dashboard unlocked`, 'success');
+                                                } else {
+                                                  onShowToast(result?.error || 'Failed', 'error');
+                                                }
                                               }}
                                               disabled={sendingStepEmail === step.id}
-                                              className="py-1 px-2 bg-red-500 hover:bg-red-400 text-black font-bold font-mono text-[8px] rounded uppercase cursor-pointer disabled:opacity-50"
+                                              className="py-1 px-3 bg-red-500 hover:bg-red-400 text-black font-bold font-mono text-[8px] rounded uppercase cursor-pointer disabled:opacity-50"
                                             >
-                                              {sendingStepEmail === step.id ? '...' : 'Send Email'}
-                                            </button>
-                                          )}
-                                          {isSent && !isReflected && (
-                                            <button
-                                              onClick={() => {
-                                                onReflectTimelineStep?.(selected.email, step.id);
-                                                onShowToast(`Reflected: ${step.label}. Student dashboard will now show this section.`, 'success');
-                                              }}
-                                              className="py-1 px-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold font-mono text-[8px] rounded uppercase cursor-pointer"
-                                            >
-                                              Mark Reflected
+                                              {sendingStepEmail === step.id ? 'Processing...' : '▶ Advance'}
                                             </button>
                                           )}
                                           {isReflected && (
-                                            <span className="py-1 px-2 bg-emerald-500/10 text-emerald-400 font-mono text-[8px] rounded uppercase">Done</span>
+                                            <span className="py-1 px-2 bg-emerald-500/10 text-emerald-400 font-mono text-[8px] rounded uppercase">✓ Done</span>
                                           )}
                                         </div>
                                       </div>

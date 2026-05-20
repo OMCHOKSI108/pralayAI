@@ -15,7 +15,7 @@ function Github({ className }: { className?: string }) { return <GitHubIcon clas
 import { 
   StudentProject, Submission, Resource, TRACKS, INITIAL_PROJECTS, INITIAL_RESOURCES, REQ_BADGES, REQ_CERTIFICATE 
 } from '@/data/mockData';
-import { printProjectDefinition, printCertificate, printOfferLetter, printWeeklyReport } from '@/utils/printHelper';
+import { printProjectDefinition, printCertificate, printOfferLetter, printWeeklyReport, printLOR } from '@/utils/printHelper';
 import HellwareLogo from '@/components/HellwareLogo';
 import { uploadBackendPaymentProof } from '@/lib/backend';
 import type { TimelineStep } from '@/app/page';
@@ -1728,15 +1728,26 @@ export default function StudentDashboard({
                     </div>
 
                     {studentStage === 'CERTIFICATE_ISSUED' ? (
-                      <button 
-                        onClick={() => {
-                          printCertificate(REQ_CERTIFICATE, "Alex Mercer");
-                          onShowToast('Pristine Certificate PDF compilation initiated successfully.', 'success');
-                        }}
-                        className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs tracking-widest uppercase rounded flex items-center justify-center gap-2 cursor-pointer transition-colors"
-                      >
-                        <Download className="w-4 h-4 text-black" /> Dispatch Verified PDF Certificate
-                      </button>
+                      <div className="space-y-3">
+                        <button 
+                          onClick={() => {
+                            printCertificate(REQ_CERTIFICATE, "Alex Mercer");
+                            onShowToast('Certificate PDF generated successfully.', 'success');
+                          }}
+                          className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs tracking-widest uppercase rounded flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <Download className="w-4 h-4 text-black" /> Download Internship Certificate
+                        </button>
+                        <button 
+                          onClick={() => {
+                            printLOR("Alex Mercer", REQ_CERTIFICATE.domain, REQ_CERTIFICATE.projectName);
+                            onShowToast('Letter of Recommendation PDF generated successfully.', 'success');
+                          }}
+                          className="w-full py-2.5 bg-white hover:bg-gray-200 text-black font-semibold text-xs tracking-widest uppercase rounded flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                        >
+                          <Download className="w-4 h-4" /> Download Letter of Recommendation (LOR)
+                        </button>
+                      </div>
                     ) : (
                       <div className="w-full py-2.5 bg-neutral-900 border border-white/5 text-gray-500 text-xs tracking-widest uppercase rounded flex items-center justify-center gap-2 cursor-not-allowed">
                         <Lock className="w-4 h-4" /> Certificate Locked — Wait for Admin to Issue

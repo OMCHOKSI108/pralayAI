@@ -21,6 +21,8 @@ import { getBackendMetrics, getBackendApplications, updateBackendApplication, ge
 
 export type StudentStage = 'APPLIED' | 'ONBOARDED' | 'INTERNSHIP' | 'COMPLETED' | 'CERTIFICATION_READY' | 'PAYMENT_SUBMITTED' | 'PAYMENT_VERIFIED' | 'CERTIFICATE_ISSUED';
 
+export const HR_NAME = 'Om Choksi';
+
 export interface TimelineStep {
   id: string;
   step: number;
@@ -121,7 +123,7 @@ export default function Home() {
     return timelines[email];
   }, [timelines]);
 
-  const handleSendTimelineEmail = useCallback(async (email: string, stepId: string) => {
+  const handleAdvanceTimeline = useCallback(async (email: string, stepId: string) => {
     const currentSteps = timelines[email] || DEFAULT_TIMELINE.map(s => ({ ...s }));
     const step = currentSteps.find(s => s.id === stepId);
     if (!step || step.status !== 'PENDING') return { success: false, error: 'Step already completed' };
@@ -143,20 +145,25 @@ export default function Home() {
       const groqData = await groqRes.json();
       const emailContent = groqData.success ? groqData.data.emailContent : `Hello ${studentName}, this is regarding your internship at Hellware. (Automated step: ${step.label})`;
 
+      const htmlContent = emailContent
+        .replace(/\n/g, '<br/>')
+        .replace(/--/g, '<br/>--')
+        + `<br/><br/><hr/><p style="color:#888;font-size:11px;">This email was sent automatically from the Hellware Internship Portal. For queries, contact ${HR_NAME} at omchoksi.pro@gmail.com</p>`;
+
       const emailRes = await fetch('/api/email/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: studentEmail,
           subject: `Hellware Internship: ${step.label}`,
-          html: emailContent.replace(/\n/g, '<br/>'),
+          html: htmlContent,
         }),
       });
       const emailData = await emailRes.json();
 
       if (emailData.success) {
         const updatedSteps = currentSteps.map(s =>
-          s.id === stepId ? { ...s, status: 'EMAIL_SENT' as const, sentAt: new Date().toISOString() } : s
+          s.id === stepId ? { ...s, status: 'REFLECTED' as const, sentAt: new Date().toISOString() } : s
         );
         setTimelines(prev => {
           const next = { ...prev, [email]: updatedSteps };
@@ -171,18 +178,6 @@ export default function Home() {
       return { success: false, error: 'Failed to send email' };
     }
   }, [timelines, simState.fullName]);
-
-  const handleReflectTimelineStep = useCallback((email: string, stepId: string) => {
-    const currentSteps = timelines[email] || DEFAULT_TIMELINE.map(s => ({ ...s }));
-    const updatedSteps = currentSteps.map(s =>
-      s.id === stepId && s.status === 'EMAIL_SENT' ? { ...s, status: 'REFLECTED' as const } : s
-    );
-    setTimelines(prev => {
-      const next = { ...prev, [email]: updatedSteps };
-      localStorage.setItem('hellware_timelines', JSON.stringify(next));
-      return next;
-    });
-  }, [timelines]);
 
   function stageForStep(stepId: string): StudentStage {
     const map: Record<string, StudentStage> = {
@@ -494,8 +489,7 @@ export default function Home() {
                 studentStages={studentStages}
                 onUpdateStudentStage={handleUpdateStudentStage}
                 timelines={timelines}
-                onSendTimelineEmail={handleSendTimelineEmail}
-                onReflectTimelineStep={handleReflectTimelineStep}
+                onAdvanceTimeline={handleAdvanceTimeline}
                 getStudentTimeline={getStudentTimeline}
               />
             )}
