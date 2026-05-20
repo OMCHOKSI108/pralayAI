@@ -1,0 +1,18 @@
+This is a placeholder for the certificate template PDF.
+
+To create a proper certificate template:
+
+1. Design your certificate in Figma, Canva, or any design tool
+2. Export as PDF
+3. Place the file here as: public/certificate-template.pdf
+
+The template should have placeholder positions for:
+- Student name
+- Project title
+- Domain
+- Certificate ID
+- Issue date
+- QR code (for verification URL)
+
+The API route at /api/certificates/generate will load this template
+and fill in the fields using pdf-lib.

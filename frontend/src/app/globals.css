@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --font-display: "Plus Jakarta Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-cyber-red: #ea3838;
+  --color-cyber-dark: #000000;
+  --color-cyber-gray-dark: #08080a;
+  --color-cyber-gray-light: #121318;
+  --color-cyber-blue: #ea3838;
+  --color-cyber-blue-glow: rgba(234, 56, 56, 0.45);
+}
+
+@keyframes grid-pulse {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.45; }
+}
+
+@keyframes scanner-move {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.animate-grid-pulse {
+  animation: grid-pulse 10s infinite ease-in-out;
+}
+
+.diagonal-hashes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.03) 0px,
+    rgba(255, 255, 255, 0.03) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+
+.diagonal-hashes-red {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(234, 56, 56, 0.06) 0px,
+    rgba(234, 56, 56, 0.06) 1px,
+    transparent 1px,
+    transparent 8px
+  );
+}
+
+.dot-matrix-glow {
+  background-image: radial-gradient(rgba(234, 56, 56, 0.12) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.dot-matrix-red-glow {
+  background-image: radial-gradient(rgba(234, 56, 56, 0.15) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e1e24;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ea3838;
+}
+
+::selection {
+  background: rgba(234, 56, 56, 0.35);
+  color: #ffffff;
+}
+
+.text-glow-blue {
+  text-shadow: 0 0 20px rgba(234, 56, 56, 0.5);
+}
+
+.text-glow-red {
+  text-shadow: 0 0 20px rgba(234, 56, 56, 0.5);
+}
+
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+}
