@@ -17,6 +17,7 @@ import {
 } from '@/data/mockData';
 import { printProjectDefinition, printCertificate, printOfferLetter, printWeeklyReport } from '@/utils/printHelper';
 import HellwareLogo from '@/components/HellwareLogo';
+import { uploadBackendPaymentProof } from '@/lib/backend';
 
 interface StudentDashboardProps {
   userEmail: string;
@@ -136,6 +137,33 @@ export default function StudentDashboard({
       status: "APPROVED"
     }
   ]);
+
+  const handlePaymentScreenshotUpload = async (file: File) => {
+    const studentId = window.localStorage.getItem('hellwareStudentId');
+    if (!studentId) {
+      onShowToast('Apply first so the backend can create your student record before payment upload.', 'warn');
+      return;
+    }
+
+    setPaymentScreenshotUploaded(file.name);
+    setPaymentStatus('VALIDATING');
+    setDidContribute(true);
+
+    try {
+      const cleanEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '').slice(0, 24) || 'student';
+      const result = await uploadBackendPaymentProof({
+        studentId,
+        amountPaid: 149,
+        transactionHash: `HW-${cleanEmail}-${Date.now()}`,
+        screenshot: file
+      });
+      window.localStorage.setItem('hellwarePaymentId', result.paymentId);
+      onShowToast(`Receipt uploaded to backend audit queue: ${file.name}`, 'success');
+    } catch (error) {
+      setPaymentStatus('PENDING');
+      onShowToast(error instanceof Error ? error.message : 'Payment proof upload failed.', 'error');
+    }
+  };
 
   const [newReportForm, setNewReportForm] = useState({
     weekNum: 3,
@@ -1932,6 +1960,7 @@ export default function StudentDashboard({
                         <button 
                           onClick={() => {
                             setPaymentScreenshotUploaded(null);
+                            setPaymentStatus('PENDING');
                             onShowToast('Removed transaction receipt screenshot.', 'warn');
                           }}
                           className="p-1 hover:bg-white/10 rounded text-gray-500 hover:text-white font-mono text-[9px] uppercase cursor-pointer"
@@ -1948,11 +1977,7 @@ export default function StudentDashboard({
                           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                           onChange={(e) => {
                             if (e.target.files && e.target.files[0]) {
-                              const fName = e.target.files[0].name;
-                              setPaymentScreenshotUploaded(fName);
-                              setPaymentStatus('VALIDATING');
-                              setDidContribute(true); // Auto contribute in state
-                              onShowToast(`Attached receipt screenshot: ${fName}. Entering validating phase.`, 'success');
+                              void handlePaymentScreenshotUpload(e.target.files[0]);
                             }
                           }}
                         />

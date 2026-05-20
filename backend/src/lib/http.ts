@@ -9,7 +9,7 @@ export function fail(error: string, status = 400, details?: unknown) {
 }
 
 export function corsHeaders() {
-  const origin = process.env.FRONTEND_ORIGIN || "*";
+  const origin = (process.env.FRONTEND_ORIGIN || "https://frontend-sooty-gamma-75.vercel.app").replace(/\/$/, "");
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET,POST,PATCH,OPTIONS",

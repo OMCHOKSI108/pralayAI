@@ -17,6 +17,7 @@ import {
 import HellwareLogo from '@/components/HellwareLogo';
 import CaseStudyDetail from '@/components/CaseStudyDetail';
 import BookingModal from '@/components/BookingModal';
+import { submitBackendApplication } from '@/lib/backend';
 
 // ----------------------------------------------------
 // Toast trigger interface
@@ -103,6 +104,7 @@ export default function PublicPages({
   });
 
   const [dragActive, setDragActive] = useState(false);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [selectedDetailProject, setSelectedDetailProject] = useState<StudentProject | null>(null);
 
   const handleApplyNext = (e: React.FormEvent) => {
@@ -170,6 +172,7 @@ export default function PublicPages({
         onShowToast('Only PDF engineering briefs are compiled.', 'error');
         return;
       }
+      setResumeFile(file);
       setAppForm(prev => ({ ...prev, resumeFileName: file.name }));
       onShowToast(`Cached resume: ${file.name}`, 'success');
     }
@@ -178,6 +181,11 @@ export default function PublicPages({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.type !== "application/pdf") {
+        onShowToast('Only PDF engineering briefs are compiled.', 'error');
+        return;
+      }
+      setResumeFile(file);
       setAppForm(prev => ({ ...prev, resumeFileName: file.name }));
       onShowToast(`Attached CV: ${file.name}`, 'success');
     }
@@ -224,36 +232,55 @@ export default function PublicPages({
         if (prev >= 100) {
           clearInterval(timer);
           
-          onSubmitApplication({
+          void submitBackendApplication({
             fullName: appForm.fullName,
             email: appForm.email,
             phone: appForm.phone,
             college: appForm.college,
             gradYear: appForm.gradYear,
-            domainInterest: appForm.domainInterest,
             skills: appForm.skills,
-            githubProfile: appForm.githubProfile,
-            linkedinProfile: appForm.linkedinProfile,
-            resumeFileName: appForm.resumeFileName,
-            status: 'PENDING',
-            appliedDate: new Date().toISOString().split('T')[0]
-          });
+            resume: resumeFile
+          })
+            .then((result) => {
+              window.localStorage.setItem('hellwareStudentId', result.studentId);
+              window.localStorage.setItem('hellwareStudentEmail', appForm.email);
 
-          setSimState((prevSim: any) => ({
-            ...prevSim,
-            step: 'APPLIED',
-            fullName: appForm.fullName,
-            email: appForm.email,
-            college: appForm.college,
-            phone: appForm.phone,
-            gradYear: appForm.gradYear,
-            role: appForm.domainInterest,
-            skills: appForm.skills
-          }));
+              onSubmitApplication({
+                fullName: appForm.fullName,
+                email: appForm.email,
+                phone: appForm.phone,
+                college: appForm.college,
+                gradYear: appForm.gradYear,
+                domainInterest: appForm.domainInterest,
+                skills: appForm.skills,
+                githubProfile: appForm.githubProfile,
+                linkedinProfile: appForm.linkedinProfile,
+                resumeFileName: appForm.resumeFileName,
+                status: 'PENDING',
+                appliedDate: new Date().toISOString().split('T')[0]
+              });
 
-          setIsScanning(false);
-          setApplyStep(3); // success applied state
-          onShowToast('CV analytical metrics scanned and parsed successfully! Welcome to the cohort wait-stream.', 'success');
+              setSimState((prevSim: any) => ({
+                ...prevSim,
+                step: 'APPLIED',
+                fullName: appForm.fullName,
+                email: appForm.email,
+                college: appForm.college,
+                phone: appForm.phone,
+                gradYear: appForm.gradYear,
+                role: appForm.domainInterest,
+                skills: appForm.skills
+              }));
+
+              setApplyStep(3);
+              onShowToast('Application saved to backend database and admin queue.', 'success');
+            })
+            .catch((error) => {
+              onShowToast(error instanceof Error ? error.message : 'Backend application submission failed.', 'error');
+            })
+            .finally(() => {
+              setIsScanning(false);
+            });
           return 100;
         }
 
@@ -1137,7 +1164,10 @@ export default function PublicPages({
                                 <span className="text-[8px] text-gray-500 font-mono tracking-widest uppercase block mt-0.5">PDF SECURE Handshake verified ✓</span>
                               </div>
                               <button 
-                                onClick={() => setAppForm(prev => ({ ...prev, resumeFileName: '' }))}
+                                onClick={() => {
+                                  setResumeFile(null);
+                                  setAppForm(prev => ({ ...prev, resumeFileName: '' }));
+                                }}
                                 className="text-[9px] font-mono text-red-500 hover:underline uppercase block mx-auto cursor-pointer"
                                 id="clear-cv-trigger"
                               >
