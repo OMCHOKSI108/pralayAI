@@ -17,7 +17,7 @@ import {
   INITIAL_RESOURCES, INITIAL_AUDIT_LOGS, StudentApplication, 
   StudentProject, Submission, Resource, AuditLog 
 } from '@/data/mockData';
-import { getBackendMetrics, getBackendApplications, updateBackendApplication } from '@/lib/backend';
+import { getBackendMetrics, getBackendApplications, updateBackendApplication, getBackendPayments, verifyBackendPayment } from '@/lib/backend';
 
 export default function Home() {
   const [loading, setLoading] = useState(true);
@@ -61,15 +61,24 @@ export default function Home() {
     totalStudents: number; totalApplied: number; totalApproved: number;
     pendingPayments: number; successfulPaymentCount: number; successfulPaymentAmount: number;
   } | null>(null);
+  const [backendPayments, setBackendPayments] = useState<Array<{
+    id: string; studentId: string; amountPaid: number;
+    transactionHash: string; screenshotUrl: string;
+    status: string; rejectionReason: string | null;
+    createdAt: string; approvedAt: string | null;
+    student: { fullName: string; email: string };
+  }>>([]);
 
   const fetchBackendData = useCallback(async (token: string) => {
     try {
-      const [metrics, apps] = await Promise.all([
+      const [metrics, apps, payments] = await Promise.all([
         getBackendMetrics(token),
-        getBackendApplications(token)
+        getBackendApplications(token),
+        getBackendPayments(token)
       ]);
       setBackendMetrics(metrics);
       setBackendApps(apps);
+      setBackendPayments(payments);
     } catch {
       // backend data not available
     }
@@ -151,6 +160,13 @@ export default function Home() {
     }
   };
 
+  const handleBackendVerifyPayment = (id: string, status: string, reason?: string) => {
+    setBackendPayments(prev => prev.map(p => p.id === id ? { ...p, status, rejectionReason: reason || null } : p));
+    if (authToken) {
+      verifyBackendPayment(authToken, id, status, reason).catch(() => {});
+    }
+  };
+
   const handleCreateNewProject = (proj: StudentProject) => {
     setProjects(prev => [proj, ...prev]);
   };
@@ -227,6 +243,7 @@ export default function Home() {
     setAuthToken(null);
     setBackendApps([]);
     setBackendMetrics(null);
+    setBackendPayments([]);
     setCurrentView('LANDING');
     showToast('Secure terminal logout performed active status.', 'warn');
   };
@@ -338,6 +355,8 @@ export default function Home() {
                 backendApplications={backendApps}
                 backendMetrics={backendMetrics}
                 onBackendUpdateApp={handleBackendUpdateApp}
+                backendPayments={backendPayments}
+                onBackendVerifyPayment={handleBackendVerifyPayment}
               />
             )}
 

@@ -7,7 +7,8 @@ import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, Award, Cpu, ShieldAlert, Check, X, Search, Filter, Plus, Edit, Trash2, 
-  Send, ListPlus, Radio, Terminal, BookOpen, UserCheck, Trash, Sparkles, AlertCircle, FileText, ChevronRight, Mail
+  Send, ListPlus, Radio, Terminal, BookOpen, UserCheck, Trash, Sparkles, AlertCircle, FileText, ChevronRight, Mail,
+  CreditCard, Eye, ExternalLink, DollarSign, Activity
 } from 'lucide-react';
 import { 
   StudentApplication, StudentProject, Submission, Resource, AuditLog, Track, TRACKS 
@@ -22,6 +23,14 @@ interface BackendApp {
 interface BackendMetrics {
   totalStudents: number; totalApplied: number; totalApproved: number;
   pendingPayments: number; successfulPaymentCount: number; successfulPaymentAmount: number;
+}
+
+interface BackendPayment {
+  id: string; studentId: string; amountPaid: number;
+  transactionHash: string; screenshotUrl: string;
+  status: string; rejectionReason: string | null;
+  createdAt: string; approvedAt: string | null;
+  student: { fullName: string; email: string };
 }
 
 interface AdminDashboardProps {
@@ -44,6 +53,8 @@ interface AdminDashboardProps {
   backendApplications?: BackendApp[];
   backendMetrics?: BackendMetrics | null;
   onBackendUpdateApp?: (id: string, status: string) => void;
+  backendPayments?: BackendPayment[];
+  onBackendVerifyPayment?: (id: string, status: string, reason?: string) => void;
 }
 
 export default function AdminDashboard({
@@ -53,16 +64,27 @@ export default function AdminDashboard({
   submissions, onReviewSubmission,
   resources, onCreateResource, onDeleteResource,
   auditLogs, onWriteAuditLog, onShowToast,
-  authToken, backendApplications, backendMetrics, onBackendUpdateApp
+  authToken, backendApplications, backendMetrics, onBackendUpdateApp,
+  backendPayments, onBackendVerifyPayment
 }: AdminDashboardProps) {
 
   // Selected sub view paths
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'APPLICATIONS' | 'STUDENTS' | 'PROJECTS' | 'SUBMISSIONS' | 'RESOURCES' | 'BROADCAST' | 'AUDIT_LOGS'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'APPLICATIONS' | 'STUDENTS' | 'PROJECTS' | 'SUBMISSIONS' | 'RESOURCES' | 'BROADCAST' | 'AUDIT_LOGS' | 'PAYMENTS' | 'CERTIFICATES'>('OVERVIEW');
 
   // Application filter states
   const [appSearch, setAppSearch] = useState('');
   const [appTrackFilter, setAppTrackFilter] = useState('ALL');
   const [selectedApp, setSelectedApp] = useState<StudentApplication | null>(null);
+
+  // Student detail view
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [studentDetailTab, setStudentDetailTab] = useState<'PROFILE' | 'TASKS' | 'SUBMISSIONS' | 'PROGRESS'>('PROFILE');
+  const [studentSearch, setStudentSearch] = useState('');
+
+  // Payment states
+  const [paymentFilter, setPaymentFilter] = useState('ALL');
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectModalId, setRejectModalId] = useState<string | null>(null);
 
   // Project creator states
   const [projectFormOpen, setProjectFormOpen] = useState(false);
@@ -216,8 +238,11 @@ export default function AdminDashboard({
             {[
               { id: 'OVERVIEW', label: 'METRICS OVERVIEW', icon: <Cpu className="w-4 h-4" /> },
               { id: 'APPLICATIONS', label: 'APPLICANTS QUEUE', icon: <Users className="w-4 h-4" /> },
+              { id: 'STUDENTS', label: 'STUDENT PROFILES', icon: <UserCheck className="w-4 h-4" /> },
               { id: 'PROJECTS', label: 'PROJECT BLUEPRINTS', icon: <ListPlus className="w-4 h-4" /> },
-              { id: 'SUBMISSIONS', label: 'SUBMISSIONS REVIEW', icon: <UserCheck className="w-4 h-4" /> },
+              { id: 'SUBMISSIONS', label: 'SUBMISSIONS REVIEW', icon: <FileText className="w-4 h-4" /> },
+              { id: 'PAYMENTS', label: 'PAYMENT VERIFICATION', icon: <CreditCard className="w-4 h-4" /> },
+              { id: 'CERTIFICATES', label: 'CERTIFICATES', icon: <Award className="w-4 h-4" /> },
               { id: 'RESOURCES', label: 'INTEL ASSETS', icon: <BookOpen className="w-4 h-4" /> },
               { id: 'BROADCAST', label: 'EMAIL BROADCAST', icon: <Mail className="w-4 h-4" /> },
               { id: 'AUDIT_LOGS', label: 'CRITICAL AUDIT LOGS', icon: <Terminal className="w-4 h-4" /> },
@@ -514,6 +539,209 @@ export default function AdminDashboard({
           )}
 
           {/* ======================================================= */}
+          {/* H. STUDENT PROFILES & DETAIL VIEW                      */}
+          {/* ======================================================= */}
+          {activeTab === 'STUDENTS' && (
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/10 pb-6 gap-4">
+                <div className="space-y-2">
+                  <span className="text-gray-500 font-mono text-xs uppercase block">// STUDENT_REGISTRY</span>
+                  <h1 className="text-3xl font-black text-white">STUDENT PROFILES</h1>
+                  <p className="text-gray-400 text-xs">View each student's assigned tasks, submissions, and progress.</p>
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="Search students..."
+                  value={studentSearch}
+                  onChange={(e) => setStudentSearch(e.target.value)}
+                  className="bg-neutral-900 text-xs border border-white/5 px-3 py-1.5 focus:outline-none focus:border-red-500 w-64" 
+                />
+              </div>
+
+              {/* Merge mock + backend students */}
+              {(() => {
+                const mockStudents = applications.map(a => ({
+                  id: a.id, fullName: a.fullName, email: a.email,
+                  college: a.college, skills: a.skills, status: a.status === 'ACCEPTED' ? 'APPROVED' : a.status,
+                  hasSubmitted: submissions.some(s => s.studentEmail === a.email),
+                  submissions: submissions.filter(s => s.studentEmail === a.email),
+                  submissionsCount: submissions.filter(s => s.studentEmail === a.email).length
+                }));
+                const backendList = (backendApplications || []).map(a => ({
+                  id: a.id, fullName: a.fullName, email: a.email,
+                  college: a.college || '', skills: a.skills, status: a.status,
+                  hasSubmitted: submissions.some(s => s.studentEmail === a.email),
+                  submissions: submissions.filter(s => s.studentEmail === a.email),
+                  submissionsCount: submissions.filter(s => s.studentEmail === a.email).length
+                }));
+                const allStudents = [...backendList, ...mockStudents.filter(m => !backendList.some(b => b.email === m.email))];
+                const filtered = allStudents.filter(s =>
+                  s.fullName.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                  s.email.toLowerCase().includes(studentSearch.toLowerCase())
+                );
+                const selected = allStudents.find(s => s.id === selectedStudentId);
+
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Student list */}
+                    <div className="lg:col-span-4 space-y-2 max-h-[600px] overflow-y-auto pr-2">
+                      {filtered.map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => { setSelectedStudentId(s.id); setStudentDetailTab('PROFILE'); }}
+                          className={`w-full text-left p-4 rounded-lg border text-xs transition-all cursor-pointer ${
+                            selectedStudentId === s.id
+                              ? 'bg-white/10 border-white text-white'
+                              : 'bg-neutral-900/40 border-white/5 text-gray-400 hover:border-white/10'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <span className="font-bold text-white block uppercase text-[11px]">{s.fullName}</span>
+                              <span className="text-[9px] text-gray-500 font-mono block">{s.email}</span>
+                            </div>
+                            <span className={`text-[8px] font-mono uppercase px-1.5 py-0.5 rounded ${
+                              s.status === 'APPROVED' || s.status === 'VERIFIED' ? 'bg-emerald-500/10 text-emerald-400' :
+                              s.status === 'APPLIED' ? 'bg-amber-500/10 text-amber-500' :
+                              'bg-gray-500/10 text-gray-400'
+                            }`}>{s.status}</span>
+                          </div>
+                          <div className="mt-2 flex gap-2 text-[8px] text-gray-600">
+                            <span>{s.college || '-'}</span>
+                            <span>•</span>
+                            <span>{s.submissionsCount} submission{s.submissionsCount !== 1 ? 's' : ''}</span>
+                          </div>
+                        </button>
+                      ))}
+                      {filtered.length === 0 && (
+                        <div className="text-center font-mono text-xs text-gray-600 py-8">No students found.</div>
+                      )}
+                    </div>
+
+                    {/* Student detail panel */}
+                    <div className="lg:col-span-8">
+                      {selected ? (
+                        <div className="bg-neutral-900/60 border border-white/5 rounded-xl p-6 space-y-6">
+                          {/* Detail sub-tabs */}
+                          <div className="flex gap-2 border-b border-white/5 pb-4">
+                            {(['PROFILE', 'TASKS', 'SUBMISSIONS', 'PROGRESS'] as const).map((tab) => (
+                              <button
+                                key={tab}
+                                onClick={() => setStudentDetailTab(tab)}
+                                className={`text-[9px] font-mono uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer transition-colors ${
+                                  studentDetailTab === tab ? 'bg-white/10 text-white font-bold' : 'text-gray-500 hover:text-white'
+                                }`}
+                              >
+                                {tab === 'PROFILE' ? 'Profile' : tab === 'TASKS' ? 'Assigned Tasks' : tab === 'SUBMISSIONS' ? 'Submissions' : 'Progress'}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* PROFILE tab */}
+                          {studentDetailTab === 'PROFILE' && (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-4 text-xs">
+                                <div className="space-y-3">
+                                  <div><span className="text-gray-500 font-mono text-[9px] uppercase block">Full Name</span><span className="text-white font-bold">{selected.fullName}</span></div>
+                                  <div><span className="text-gray-500 font-mono text-[9px] uppercase block">Email</span><span className="text-white">{selected.email}</span></div>
+                                  <div><span className="text-gray-500 font-mono text-[9px] uppercase block">College</span><span className="text-white">{selected.college || '-'}</span></div>
+                                </div>
+                                <div className="space-y-3">
+                                  <div><span className="text-gray-500 font-mono text-[9px] uppercase block">Status</span><span className={`font-bold ${selected.status === 'APPROVED' || selected.status === 'VERIFIED' ? 'text-emerald-400' : 'text-amber-500'}`}>{selected.status}</span></div>
+                                  <div><span className="text-gray-500 font-mono text-[9px] uppercase block">Skills</span><span className="text-white">{(selected.skills?.join(', ') || '-')}</span></div>
+                                  <div><span className="text-gray-500 font-mono text-[9px] uppercase block">Submissions</span><span className="text-white">{selected.submissionsCount}</span></div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* TASKS tab */}
+                          {studentDetailTab === 'TASKS' && (
+                            <div className="space-y-4">
+                              {projects.filter(p => selected.submissions.some(s => s.projectId === p.id)).length > 0 ? (
+                                projects.filter(p => selected.submissions.some(s => s.projectId === p.id)).map((proj) => (
+                                  <div key={proj.id} className="bg-black/40 border border-white/5 rounded-lg p-4 space-y-3">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <h4 className="font-bold text-sm text-white">{proj.title}</h4>
+                                        <span className="text-[10px] text-gray-500 font-mono">{proj.domain} • {proj.difficulty}</span>
+                                      </div>
+                                      <span className="text-[9px] text-gray-500 font-mono">{proj.milestones.filter(m => m.completed).length}/{proj.milestones.length} done</span>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      {proj.milestones.map((m) => (
+                                        <div key={m.id} className="flex items-center gap-2 text-[10px]">
+                                          <div className={`w-3 h-3 rounded-full border ${m.completed ? 'bg-emerald-500 border-emerald-500' : 'border-gray-600'}`} />
+                                          <span className={m.completed ? 'text-gray-400 line-through' : 'text-gray-300'}>{m.text}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-center font-mono text-xs text-gray-600 py-8">No tasks assigned yet.</div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* SUBMISSIONS tab */}
+                          {studentDetailTab === 'SUBMISSIONS' && (
+                            <div className="space-y-3">
+                              {selected.submissions.length > 0 ? selected.submissions.map((sub) => (
+                                <div key={sub.id} className="bg-black/40 border border-white/5 rounded-lg p-4 space-y-2">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <span className="font-bold text-xs text-white">{sub.projectName}</span>
+                                      <span className="text-[9px] text-gray-500 font-mono block">{sub.submittedDate}</span>
+                                    </div>
+                                    <span className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded ${
+                                      sub.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400' :
+                                      sub.status === 'CHANGES_REQUESTED' ? 'bg-amber-500/10 text-amber-500' :
+                                      'bg-blue-500/10 text-blue-400'
+                                    }`}>{sub.status}</span>
+                                  </div>
+                                  {sub.githubUrl && <a href={sub.githubUrl} target="_blank" rel="noreferrer" className="text-[10px] text-red-500 hover:underline block">GitHub →</a>}
+                                  {sub.liveUrl && <a href={sub.liveUrl} target="_blank" rel="noreferrer" className="text-[10px] text-red-500 hover:underline block">Live →</a>}
+                                  {sub.feedback && <div className="text-[10px] text-gray-400 italic p-2 bg-black/30 rounded">"{sub.feedback}"</div>}
+                                </div>
+                              )) : (
+                                <div className="text-center font-mono text-xs text-gray-600 py-8">No submissions yet.</div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* PROGRESS tab */}
+                          {studentDetailTab === 'PROGRESS' && (
+                            <div className="space-y-4">
+                              <div className="bg-black/40 border border-white/5 rounded-lg p-4">
+                                <span className="text-[9px] text-gray-500 font-mono uppercase block mb-2">Weekly Progress Overview</span>
+                                <div className="flex items-center gap-4">
+                                  <div className="flex-1 bg-neutral-800 rounded-full h-2">
+                                    <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${Math.min(100, selected.submissionsCount * 25)}%` }} />
+                                  </div>
+                                  <span className="text-xs font-mono text-emerald-400">{Math.min(100, selected.submissionsCount * 25)}%</span>
+                                </div>
+                                <div className="mt-3 text-[10px] text-gray-500 font-mono">
+                                  {selected.submissionsCount} submission{selected.submissionsCount !== 1 ? 's' : ''} completed
+                                  {selected.submissions.filter(s => s.status === 'APPROVED').length > 0 ? ` • ${selected.submissions.filter(s => s.status === 'APPROVED').length} approved` : ''}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-12 border border-white/5 border-dashed rounded text-center text-xs font-mono text-gray-500">
+                          <span>SELECT A STUDENT FROM THE REGISTRY</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* ======================================================= */}
           {/* C. PROJECT BLUEPRINTS DATABASE MANAGEMENT BLOCK        */}
           {/* ======================================================= */}
           {activeTab === 'PROJECTS' && (
@@ -690,6 +918,151 @@ export default function AdminDashboard({
           )}
 
           {/* ======================================================= */}
+          {/* I. PAYMENT VERIFICATION                                 */}
+          {/* ======================================================= */}
+          {activeTab === 'PAYMENTS' && (
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/10 pb-6 gap-4">
+                <div className="space-y-2">
+                  <span className="text-gray-500 font-mono text-xs uppercase block">// PAYMENT_AUDIT</span>
+                  <h1 className="text-3xl font-black text-white">PAYMENT VERIFICATION</h1>
+                  <p className="text-gray-400 text-xs">Verify or reject payment proofs uploaded by students.</p>
+                </div>
+                <select 
+                  value={paymentFilter}
+                  onChange={(e) => setPaymentFilter(e.target.value)}
+                  className="bg-neutral-900 text-xs border border-white/5 px-3 py-1.5 focus:outline-none focus:border-red-500"
+                >
+                  <option value="ALL">All payments</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="REVIEW">Review</option>
+                  <option value="SUCCESS">Success</option>
+                  <option value="FAILED">Failed</option>
+                </select>
+              </div>
+
+              {/* Backend payments */}
+              {backendPayments && backendPayments.length > 0 ? (
+                <div className="bg-black border border-white/5 rounded-xl overflow-hidden">
+                  <div className="bg-neutral-900 px-6 py-3 border-b border-white/5 text-[9px] font-mono text-gray-500 uppercase tracking-wider grid grid-cols-12 gap-4">
+                    <span className="col-span-2">STUDENT</span>
+                    <span className="col-span-1">AMOUNT</span>
+                    <span className="col-span-2">TX HASH</span>
+                    <span className="col-span-1">PROOF</span>
+                    <span className="col-span-1">STATUS</span>
+                    <span className="col-span-2">REASON</span>
+                    <span className="col-span-3 text-right">ACTIONS</span>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {backendPayments
+                      .filter(p => paymentFilter === 'ALL' || p.status === paymentFilter)
+                      .map((payment) => (
+                        <div key={payment.id} className="px-6 py-3.5 flex flex-col md:grid md:grid-cols-12 gap-4 items-center text-xs tracking-tight hover:bg-white/[0.01]">
+                          <div className="col-span-2 text-left">
+                            <span className="font-bold text-white block uppercase text-[11px]">{payment.student.fullName}</span>
+                            <span className="text-[9px] text-gray-500 font-mono block">{payment.student.email}</span>
+                          </div>
+                          <span className="col-span-1 font-mono font-bold">₹{payment.amountPaid}</span>
+                          <span className="col-span-2 font-mono text-[10px] text-gray-400 truncate">{payment.transactionHash}</span>
+                          <span className="col-span-1">
+                            <a href={payment.screenshotUrl} target="_blank" rel="noreferrer" className="text-red-500 hover:underline text-[10px] font-mono flex items-center gap-1">
+                              <Eye className="w-3 h-3" /> View
+                            </a>
+                          </span>
+                          <span className={`col-span-1 font-mono text-[9px] uppercase px-2 py-0.5 rounded ${
+                            payment.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-400' :
+                            payment.status === 'FAILED' ? 'bg-red-500/10 text-red-500' :
+                            payment.status === 'REVIEW' ? 'bg-blue-500/10 text-blue-400' :
+                            'bg-amber-500/10 text-amber-500'
+                          }`}>{payment.status}</span>
+                          <span className="col-span-2 text-[9px] text-gray-500 truncate">{payment.rejectionReason || '-'}</span>
+                          <div className="col-span-3 text-right flex justify-end gap-2">
+                            {(payment.status === 'PENDING' || payment.status === 'REVIEW') ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    onBackendVerifyPayment?.(payment.id, 'SUCCESS');
+                                    onWriteAuditLog(`PAYMENT APPROVED: ${payment.student.fullName.toUpperCase()} - ₹${payment.amountPaid}`, 'INFO');
+                                    onShowToast(`Payment approved for ${payment.student.fullName}`, 'success');
+                                  }}
+                                  className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-mono uppercase rounded cursor-pointer"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => setRejectModalId(payment.id)}
+                                  className="px-3 py-1 bg-red-600/50 hover:bg-red-600 text-red-200 text-[9px] font-mono uppercase rounded cursor-pointer"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-[9px] font-mono text-gray-600 uppercase">{payment.status}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-12 border border-white/5 border-dashed rounded text-center text-xs font-mono text-gray-500">
+                  <span>No payment records found. Payments appear when students upload proof via the student dashboard.</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ======================================================= */}
+          {/* J. CERTIFICATES MANAGEMENT                              */}
+          {/* ======================================================= */}
+          {activeTab === 'CERTIFICATES' && (
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-white/10 pb-6 gap-4">
+                <div className="space-y-2">
+                  <span className="text-gray-500 font-mono text-xs uppercase block">// CERTIFICATE_AUTHORITY</span>
+                  <h1 className="text-3xl font-black text-white">CERTIFICATES</h1>
+                  <p className="text-gray-400 text-xs">View and manage issued internship certificates.</p>
+                </div>
+              </div>
+
+              {/* Approved submissions = eligible for certificates */}
+              <div className="bg-black border border-white/5 rounded-xl overflow-hidden">
+                <div className="bg-neutral-900 px-6 py-3 border-b border-white/5 text-[9px] font-mono text-gray-500 uppercase tracking-wider grid grid-cols-12 gap-4">
+                  <span className="col-span-3">STUDENT</span>
+                  <span className="col-span-3">PROJECT</span>
+                  <span className="col-span-2">STATUS</span>
+                  <span className="col-span-2">DATE</span>
+                  <span className="col-span-2 text-right">CERTIFICATE</span>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {submissions.filter(s => s.status === 'APPROVED').length > 0 ? (
+                    submissions.filter(s => s.status === 'APPROVED').map((sub) => (
+                      <div key={sub.id} className="px-6 py-3.5 flex flex-col md:grid md:grid-cols-12 gap-4 items-center text-xs tracking-tight hover:bg-white/[0.01]">
+                        <div className="col-span-3 text-left">
+                          <span className="font-bold text-white block uppercase text-[11px]">{sub.studentName}</span>
+                          <span className="text-[9px] text-gray-500 font-mono block">{sub.studentEmail}</span>
+                        </div>
+                        <span className="col-span-3 text-gray-300 text-[10px]">{sub.projectName}</span>
+                        <span className="col-span-2 font-mono text-[9px] uppercase text-emerald-400">APPROVED</span>
+                        <span className="col-span-2 text-[10px] text-gray-500">{sub.submittedDate}</span>
+                        <div className="col-span-2 text-right">
+                          <span className="text-[9px] font-mono text-emerald-400 flex items-center justify-end gap-1">
+                            <Award className="w-3 h-3" /> Ready
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-12 text-center text-xs font-mono text-gray-500">
+                      No approved submissions yet. Certificates are generated when submissions are approved.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================= */}
           {/* E. RESOURCES MANAGER                                   */}
           {/* ======================================================= */}
           {activeTab === 'RESOURCES' && (
@@ -856,7 +1229,51 @@ export default function AdminDashboard({
       </main>
 
       {/* 3. NESTED DRAWER MODALS */}
-      
+
+      {/* Payment reject reason modal */}
+      {rejectModalId && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 z-50 text-left">
+          <div className="w-full max-w-md bg-neutral-950 border border-white/10 rounded-xl p-8 space-y-4 shadow-xl">
+            <div className="border-b border-white/5 pb-2">
+              <span className="text-red-500 font-mono text-[9px] uppercase tracking-widest block font-bold">// REJECT_PAYMENT</span>
+              <h3 className="font-bold text-lg text-white">Reject Payment Proof</h3>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-mono text-gray-400 uppercase">Rejection Reason</label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                className="w-full h-24 bg-black border border-white/10 p-4 font-mono text-xs text-white rounded focus:outline-none focus:border-red-500"
+                placeholder="Enter reason for rejection..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+              <button
+                onClick={() => {
+                  if (onBackendVerifyPayment) {
+                    onBackendVerifyPayment(rejectModalId, 'FAILED', rejectReason || 'Rejected by admin');
+                    onWriteAuditLog(`PAYMENT REJECTED: ID ${rejectModalId}`, 'WARNING');
+                    onShowToast('Payment rejected.', 'error');
+                  }
+                  setRejectModalId(null);
+                  setRejectReason('');
+                }}
+                className="py-2.5 bg-red-600 text-white font-bold text-xs font-mono uppercase cursor-pointer text-center hover:bg-red-500"
+              >
+                ✓ Confirm Reject
+              </button>
+              <button
+                type="button"
+                onClick={() => { setRejectModalId(null); setRejectReason(''); }}
+                className="py-2.5 border border-white/10 text-gray-400 hover:text-white uppercase font-mono text-xs cursor-pointer text-center"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* A. Create project blueprint Modal */}
       {projectFormOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 z-50 text-left">

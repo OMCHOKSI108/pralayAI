@@ -153,3 +153,33 @@ export async function getMyBackendApplication(token: string) {
   });
   return parseResponse<Record<string, unknown>>(response);
 }
+
+// ─── Payments ──────────────────────────────────────────────────
+
+export async function getBackendPayments(token: string, status?: string) {
+  const url = status
+    ? `${backendUrl}/api/admin/payments?status=${status}`
+    : `${backendUrl}/api/admin/payments`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return parseResponse<Array<{
+    id: string; studentId: string; amountPaid: number;
+    transactionHash: string; screenshotUrl: string;
+    status: string; rejectionReason: string | null;
+    createdAt: string; approvedAt: string | null;
+    student: { fullName: string; email: string };
+  }>>(response);
+}
+
+export async function verifyBackendPayment(token: string, id: string, status: string, rejectionReason?: string) {
+  const response = await fetch(`${backendUrl}/api/admin/payments/${id}/verify`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ status, rejectionReason })
+  });
+  return parseResponse<Record<string, unknown>>(response);
+}
