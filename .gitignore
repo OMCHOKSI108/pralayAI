@@ -27,6 +27,8 @@ lib/
 lib64/
 !frontend/src/lib/
 !frontend/src/lib/**
+!backend/src/lib/
+!backend/src/lib/**
 parts/
 sdist/
 var/
