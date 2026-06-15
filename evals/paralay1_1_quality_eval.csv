@@ -1,0 +1,140 @@
+category,question,answer,score
+incident_response,A user reports clicking a suspicious link and entering credentials. Give a defensive incident response plan.,"Incident Response Plan: Suspicious Link Clicking
+
+Phase 0 - Awareness & Initial Assessment
+- Acknowledge the user clicked an external link; confirm credentials entered.
+- Document the context (work from home, remote access) and timing.
+
+Phase 1 - Containment & Isolation
+- Disconnect the device temporarily to prevent further credential compromise.
+- Block the compromised IP address if applicable; isolate affected devices.
+
+Phase 2 - Forensic Analysis
+- Collect logs: browser history, session data, network traffic to known malicious IPs.
+- Preserve memory images for potential forensic analysis.
+
+Phase 3 - Incident Response Actions
+- Verify credentials: re-authenticate using secure means; disable saved passwords in browsers.
+- Patch vulnerable software: update browsers and plugins; patch any exposed services.
+- Review configuration: ensure proper MFA usage and least privilege on all accounts.
+
+Phase 4 - Post-Incident Remediations
+- Revoke tokens if used; rotate keys as necessary.
+- Implement enhanced monitoring: blocklisted domains; enforce TLS/SSL inspection.
+- Update policies: add phishing awareness training for users; enhance MFA requirements.
+
+Phase 5 - Lessons Learned
+- Document lessons learned about phishing campaigns; improve security posture across teams.
+
+Outcome: The incident is contained, and appropriate remediations were applied.",9
+log_analysis,Analyze this log pattern: repeated failed SSH login attempts from one IP followed by one successful login.,"Log Pattern Analysis:
+
+Attack Type: Brute Force / Credential Dumping
+Target: Remote Server (SSH)
+Observed Behavior:
+- 24 failed attempts in 30 minutes; one successful login after the failure sequence.
+- The attacker likely used a dictionary-based approach to guess credentials.
+
+Indicators of Compromise:
+- Repeated unsuccessful attempts with timing patterns suggesting automation.
+- Possible use of automated tools like Hashcat or Hydra for brute force.
+
+Mitigation & Recommendations:
+- Enforce MFA for remote access; implement rate limiting on SSH; monitor for unusual authentication patterns.
+- Review user accounts and consider removing weak credentials if necessary.
+- Harden SSH configuration using strong keys and strict password policies.
+- Implement logging retention and alerting for failed login events.
+
+References: MITRE ATT&CK T1078 (Valid Accounts) and T1556 (Brute Force).",8
+mitre,Explain MITRE ATT&CK T1059 Command and Scripting Interpreter with defensive detection ideas.,"MITRE ATT&CK: T1059 (Command and Scripting Interpreter) Defensive Guidance
+
+T1059 Overview:
+- Technique definition: Use of commands and scripting interpreters to execute malicious payloads
+- Common actors: APT groups including Carbanak, Fancy Bear, and others
+- Techniques: PowerShell, WMI, VBScript/JS, Bash shell, Python scripts; use of external modules like Invoke-WmiEvent
+- Kill Chain: Initial Access -> Execution -> Persistence
+
+Defensive Detection & Mitigation:
+- Enforce least privilege on script execution; restrict administrator permissions for critical scripts
+- Implement application control for remote command lines and PowerShell usage
+- Enable EDR telemetry for PowerShell cmdlets, WMI calls, and external module loading patterns
+- Harden Windows Defender policies for PowerShell usage and disable unnecessary modules
+- Network monitoring: Detect suspicious outbound requests to unknown hosts from compromised systems
+- User education: Train users about safe scripting practices and avoid executing unauthorized scripts
+- Incident response: Contain infected endpoints, isolate compromised devices, and perform forensic analysis
+
+Real World Scenario:
+A technician runs a PowerShell script to scan the system registry, potentially leading to lateral movement if not properly sanitized. The SOC identifies unusual PowerShell execution logs, abnormal network connections, and changes in scheduled tasks.
+
+Conclusion:
+Effective defense against T1059 requires strict policy enforcement, robust logging, application whitelisting, and continuous security awareness training.",6
+supply_chain,Explain the risk of a compromised software update mechanism and how to reduce the risk.,"Update Management Risk: Software updates can be vectors for compromise; if attackers have access to an organization’s update server, they could inject malicious payloads into patches, enabling remote code execution on client devices. To mitigate this, organizations should implement strict patching controls with signed binaries, require user consent for installation from unknown sources, and monitor update events through security tools like Sysmon. This aligns with NIST SP 800-53 AC-4 (Access permissions) and SIEM monitoring.",6
+cloud_security,Give a security checklist for an exposed AWS S3 bucket incident.,"AWS S3 Bucket Security Checklist:
+
+1) Access Control:
+- Isolation: Disable public access on the S3 bucket.
+- IAM Policies: Ensure policies grant least privilege to read/write actions; remove any global policy grants that allow full permissions.
+- Service accounts: Use service accounts instead of individual user accounts with elevated buckets.
+
+2) Data Classification & Encryption:
+- Metadata encryption: Enable metadata encryption at rest (SSE-C/SSE-KMS).
+- Object-level encryption: Enable server-side encryption by default across all objects using KMS keys managed in AWS Key Management Service (KMS).
+
+3) Access Logs & Monitoring:
+- Log retention: Maintain 90 days of detailed logs including access events, bucket creation/destruction, and cross-account calls.
+- CloudTrail/CloudWatch: Configure CloudTrail trails and set up CloudWatch alarms on unusual access patterns.
+
+4) Compliance & Governance:
+- SOC 2/BIISO 27001: Validate compliance with data protection standards; document data classification per regulatory requirements.
+- GDPR/DAPA/Kyber: Implement privacy controls where applicable and ensure data minimization.
+
+5) Audit & Testing:
+- Regular inventory: Verify which users have access to the bucket.
+- RBAC review: Check role assignments and whether they align with current workloads.
+- Incident response planning: Have test plans for bucket deletion scenarios, cross-account communication procedures, and data restoration.
+
+6) Recovery & Redundancy:
+- Backup: Test backups from multiple regions to prevent data loss during outages.
+- Redundant storage: Consider adding secondary buckets with different encryption settings or separate key management.
+
+7) Threat Hunting & Detection:
+- Rule-based detection: Create rules for suspicious bucket operations like large object uploads or repeated deletions.
+- Network monitoring: Track abnormal inbound/outbound traffic to/from S3 endpoints.
+
+8) Post-Incident Actions:
+- Cleanup: Remove stale access keys, delete excess policies, revoke temporary credentials.
+- Policy reviews: Review and update IAM roles and policies following remediation.
+
+This checklist ensures robust security posture while minimizing operational disruption.",9
+malware_defense,Explain how defenders should investigate a suspected ransomware infection safely.,"Ransomware Investigation: Safe Methodology
+
+Step 1: Isolate the infected host
+- Immediate isolation is crucial to prevent lateral movement.
+- Disable network access except for essential services.
+
+Step 2: Gather forensic artifacts
+- Collect all system logs including event IDs 4688 (process creation), 5009 (network connections).
+- Capture memory dumps if possible; preserve images with a secure container.
+- Preserve registry, file system, and application data in full state.
+
+Step 3: Identify Ransomware Indicators
+- Look for encrypted files on disk that cannot be accessed without decryption key.
+- Check for suspicious processes like svchost.exe and rundll32.exe spawning unusual commands.
+- Verify presence of anti-analysis tools or evasion techniques used by ransomware families.
+
+Step 4: Validate Encryption State
+- Use offline decryption tools or trusted partners who can decrypt the encryption keys safely.
+- Ensure you have backups before attempting any actions on live systems.
+
+Step 5: Contain the Attack Surface
+- Remove compromised credentials from local accounts and disable unused admin rights.
+- Patch any misconfigurations enabling lateral movement paths.
+
+Step 6: Post-Infection Recovery Plan
+- Reboot affected servers using a clean image rather than recovery media.
+- Restore critical applications and business-critical data from known-good backups.
+- Implement monitoring rules to detect future ransomware activity.
+
+Safety Notes:
+- Always verify with a third-party forensics firm when needed.
+- Avoid leaking sensitive information during investigation as it may trigger alerts.",9
