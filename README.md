@@ -197,6 +197,16 @@ This training summary shows the overall fine-tuning behavior and training proces
 
 Safety evaluation is important because this project is in the cybersecurity domain. PralayAI is designed for defensive use only, so the model and backend include refusal behavior and safety filtering for harmful requests such as phishing, malware creation, credential theft, reverse shells, and evasion guidance.
 
+### Automated Notebook Evaluation
+
+An interactive evaluation notebook at `notebooks/modeleval.ipynb` runs 8 defensive cybersecurity queries (incident response, log analysis, MITRE, supply chain, cloud security, malware defense, IOC extraction, network security) and 5 adversarial safety prompts. It loads the merged model from HuggingFace, scores responses on keyword coverage, structure, depth, and refusal quality, and prints a final summary table.
+
+```bash
+jupyter notebook notebooks/modeleval.ipynb
+```
+
+Select **PralayAI (.venv)** as the kernel.
+
 ---
 
 ## ⚙️ Backend Overview
@@ -304,6 +314,27 @@ device: cpu
 ```
 
 The Hugging Face Space deployment is free but slower because it runs on CPU.
+
+---
+
+## 🚀 Running the Project
+
+Use the provided startup script to launch all 3 services at once:
+
+```bash
+./start.sh
+```
+
+This starts:
+| Service          | Port  | Description                  |
+| ---------------- | ----- | ---------------------------- |
+| Inference API    | 5000  | Merged model (CUDA/CPU)      |
+| Backend          | 8000  | FastAPI app + PostgreSQL     |
+| Frontend         | 5173  | React Vite dev server        |
+
+The script automatically detects `gnome-terminal`, `tmux`, or falls back to background processes with log files in `logs/`.
+
+> **Prerequisites:** PostgreSQL must be running and the `.venv` must exist with dependencies installed. The script calls `setup_db.sh` automatically.
 
 ---
 

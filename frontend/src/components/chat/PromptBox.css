@@ -1,0 +1,127 @@
+.prompt-box-wrapper {
+  width: 100%;
+}
+
+.prompt-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 6px 8px 6px 16px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  backdrop-filter: blur(8px);
+}
+
+.prompt-box:focus-within {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.12);
+}
+
+.prompt-box--loading {
+  opacity: 0.7;
+}
+
+.prompt-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: none;
+  padding: 6px 4px;
+  min-height: 24px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'Outfit', sans-serif;
+}
+
+.prompt-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.prompt-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  transition: color var(--transition), background var(--transition);
+  flex-shrink: 0;
+}
+
+.prompt-icon-btn:hover:not(:disabled) {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.prompt-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.prompt-send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transition: background var(--transition), color var(--transition), transform var(--transition);
+  flex-shrink: 0;
+}
+
+.prompt-send-btn--active {
+  background: var(--accent-blue);
+  color: var(--bg-base);
+  cursor: pointer;
+}
+
+.prompt-send-btn--active:hover {
+  background: var(--accent-blue-hover);
+  transform: scale(1.05);
+}
+
+.prompt-send-btn:disabled:not(.prompt-send-btn--active) {
+  opacity: 0.5;
+}
+
+/* Stop button */
+.prompt-stop-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--accent-red);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.prompt-stop-btn:hover {
+  background: rgba(248, 113, 113, 0.25);
+  transform: scale(1.05);
+}
+
+.prompt-disclaimer {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 10px;
+  line-height: 1.4;
+}

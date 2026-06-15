@@ -1,5 +1,6 @@
 import time
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -18,26 +19,32 @@ def make_title(message: str) -> str:
     return cleaned[:60] + "..."
 
 
-def create_or_get_conversation(db: Session, request: ChatRequest) -> Conversation:
+def create_or_get_conversation(
+    db: Session, request: ChatRequest, user_id: Optional[str] = None
+) -> Conversation:
     if request.conversation_id:
         conversation = (
             db.query(Conversation)
             .filter(Conversation.id == request.conversation_id)
             .first()
         )
-
         if conversation:
             return conversation
 
-    conversation = Conversation(title=make_title(request.message))
+    conversation = Conversation(
+        title=make_title(request.message),
+        user_id=user_id,
+    )
     db.add(conversation)
     db.commit()
     db.refresh(conversation)
     return conversation
 
 
-def handle_chat(db: Session, request: ChatRequest) -> ChatResponse:
-    conversation = create_or_get_conversation(db, request)
+def handle_chat(
+    db: Session, request: ChatRequest, user_id: Optional[str] = None
+) -> ChatResponse:
+    conversation = create_or_get_conversation(db, request, user_id)
 
     user_message = Message(
         conversation_id=conversation.id,

@@ -1,8 +1,32 @@
+# ── Web framework ─────────────────────────────────────────────────────────────
 fastapi
 uvicorn[standard]
+python-multipart
+
+# ── Database ──────────────────────────────────────────────────────────────────
 sqlalchemy
 psycopg2-binary
 pydantic
 pydantic-settings
 python-dotenv
+
+# ── HTTP client ───────────────────────────────────────────────────────────────
 requests
+
+# ── RAG: embeddings ───────────────────────────────────────────────────────────
+sentence-transformers
+
+# ── RAG: vector store ─────────────────────────────────────────────────────────
+chromadb
+
+# ── RAG: document parsing ─────────────────────────────────────────────────────
+pymupdf
+python-docx
+
+# ── Web scraping ──────────────────────────────────────────────────────────────
+beautifulsoup4
+lxml
+httpx>=0.27.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+numpy

@@ -1,70 +1,311 @@
+/* Mobile backdrop */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+  backdrop-filter: blur(2px);
+}
+
+/* Sidebar base */
 .sidebar {
-	min-height: 100vh;
-	display: inline-flex;
-	flex-direction: column;
-	justify-content: space-between;
-	background-color: #f0f4f9;
-	padding: 10px 15px;
-   
-}
-.sidebar .top{
-    margin-top: 15px;
-}
-.sidebar img {
-	width: 30px;
-}
-.sidebar .menu {
-	display: block;
-	margin-left: 10px;
-	cursor: pointer;
-}
-.sidebar .new-chat{
- margin-top: 50px;
- display: inline-flex;
- align-items: center;
- gap: 10px;
- padding: 10px 15px;
- background-color: #e6eaf1;
- border-radius: 50px;
- font-size: 14px;
- color: grey;
- cursor: pointer;
-}
-.sidebar .recent{
-    display: flex;
-    flex-direction: column;
-    animation: fadeIn 2.0s;
-}
-.sidebar .recent-title{
-    margin-top: 30px;
-    margin-bottom: 20px;
-
-}
-.sidebar .recent-entry{
-    display: flex;
-    align-items: start;
-    gap: 10px;
-    padding: 10px;
-    padding-right: 40px;
-    border-radius: 50px;
-    color: #282828;
-    cursor: pointer;
-
-}
-.sidebar .recent-entry:hover{
-    background-color: #e2e6eb;
-}
-.sidebar .bottom{
-    display: flex;
-    flex-direction: column;
-}
-.sidebar .bottom-item{
-    padding-right: 10px;
-    cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100vh;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width var(--transition-slow);
+  position: sticky;
+  top: 0;
 }
 
-@media (max-width:600px){
-    .sidebar{
-        display: none;
-    }
+.sidebar--expanded {
+  width: 260px;
+}
+
+.sidebar--collapsed {
+  width: 64px;
+}
+
+/* Top section */
+.sidebar__top {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 8px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* New Chat - Gemini pill style */
+.sidebar__new-chat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  padding: 9px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  width: 100%;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+  margin-bottom: 8px;
+}
+
+.sidebar__new-chat:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.sidebar--collapsed .sidebar__new-chat {
+  padding: 9px;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+}
+
+/* Search */
+.sidebar__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
+  margin-bottom: 8px;
+  color: var(--text-muted);
+}
+
+.sidebar__search input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-family: 'Outfit', sans-serif;
+  flex: 1;
+  width: 100%;
+}
+
+.sidebar__search input::placeholder {
+  color: var(--text-muted);
+}
+
+/* History */
+.sidebar__history {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar__section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 8px 10px 4px;
+}
+
+/* Empty state */
+.sidebar__empty-history {
+  padding: 16px 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Chat items - Gemini rounded style */
+.sidebar__chat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.83rem;
+  position: relative;
+  transition: background var(--transition), color var(--transition);
+  min-width: 0;
+}
+
+.sidebar__chat-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar__chat-item--active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.sidebar__chat-item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.sidebar__chat-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.sidebar__chat-delete {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color var(--transition), background var(--transition);
+}
+
+.sidebar__chat-item:hover .sidebar__chat-delete {
+  display: flex;
+}
+
+.sidebar__chat-delete:hover {
+  color: var(--accent-red);
+  background: rgba(248, 113, 113, 0.1);
+}
+
+/* Bottom section */
+.sidebar__bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* User row */
+.sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--transition);
+  min-width: 0;
+  margin-bottom: 4px;
+}
+
+.sidebar__user:hover {
+  background: var(--bg-hover);
+}
+
+.sidebar__user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar__user-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__user-email {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Icon buttons - Gemini style */
+.sidebar__icon-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.83rem;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: var(--radius-pill);
+  width: 100%;
+  text-align: left;
+  transition: background var(--transition), color var(--transition);
+  white-space: nowrap;
+}
+
+.sidebar__icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar__icon-btn--danger:hover {
+  color: var(--accent-red);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+/* Collapsed adjustments */
+.sidebar--collapsed .sidebar__icon-btn {
+  justify-content: center;
+  padding: 8px;
+}
+
+.sidebar--collapsed .sidebar__user {
+  justify-content: center;
+  padding: 8px;
+}
+
+/* Mobile: sidebar overlays */
+@media (max-width: 700px) {
+  .sidebar-backdrop {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 100;
+    height: 100vh;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .sidebar--collapsed {
+    transform: translateX(-100%);
+    width: 260px;
+  }
+
+  .sidebar--expanded {
+    transform: translateX(0);
+    width: 260px;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }

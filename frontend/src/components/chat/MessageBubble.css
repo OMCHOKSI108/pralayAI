@@ -1,0 +1,466 @@
+/* ── Row layout ──────────────────────────────────────────────────────────── */
+
+.msg-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 24px;
+  animation: msgFadeIn 0.25s ease;
+}
+
+@keyframes msgFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.msg-row--user {
+  flex-direction: row-reverse;
+}
+
+/* ── User bubble — clean dark ────────────────────────────────────────────── */
+
+.msg-bubble--user {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 18px 18px 4px 18px;
+  padding: 12px 16px;
+  max-width: 72%;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.msg-bubble--user .msg-text {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  word-break: break-word;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+/* ── Avatars ─────────────────────────────────────────────────────────────── */
+
+.msg-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* User avatar */
+.msg-avatar--user {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.msg-avatar--assistant {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.msg-avatar--assistant img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+/* ── Assistant card ──────────────────────────────────────────────────────── */
+
+.msg-card--assistant {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px 18px 18px 18px;
+  padding: 14px 18px;
+  max-width: 78%;
+  box-shadow: var(--shadow-sm);
+}
+
+.msg-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  gap: 8px;
+}
+
+/* ── Timestamp ───────────────────────────────────────────────────────────── */
+
+.msg-timestamp {
+  font-size: 0.71rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Copy button ─────────────────────────────────────────────────────────── */
+
+.msg-copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-family: 'Outfit', sans-serif;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
+}
+
+.msg-copy-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-light);
+  background: var(--bg-hover);
+}
+
+/* ── Loading dots ────────────────────────────────────────────────────────── */
+
+.msg-loading-dots {
+  display: flex;
+  gap: 5px;
+  padding: 8px 4px;
+  align-items: center;
+}
+
+.msg-loading-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: dotPulse 1.4s infinite ease-in-out;
+}
+
+.msg-loading-dots span:nth-child(1) { animation-delay: 0s; }
+.msg-loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.msg-loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes dotPulse {
+  0%, 80%, 100% { transform: scale(0.65); opacity: 0.4; }
+  40%           { transform: scale(1);    opacity: 1; }
+}
+
+/* ── Streaming cursor ────────────────────────────────────────────────────── */
+
+.msg-streaming-cursor {
+  display: inline-block;
+  color: var(--accent-blue);
+  font-size: 0.9em;
+  vertical-align: text-bottom;
+  animation: cursorBlink 0.8s step-end infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+/* ── Markdown content ────────────────────────────────────────────────────── */
+
+.msg-markdown {
+  font-size: 0.93rem;
+  line-height: 1.75;
+  color: var(--text-primary);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Headings */
+.msg-markdown h1,
+.msg-markdown h2,
+.msg-markdown h3,
+.msg-markdown h4 {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin: 1rem 0 0.35rem;
+  line-height: 1.3;
+}
+
+.msg-markdown h1 { font-size: 1.15rem; }
+.msg-markdown h2 { font-size: 1.05rem; }
+.msg-markdown h3 { font-size: 0.98rem; }
+.msg-markdown h4 { font-size: 0.93rem; }
+
+.msg-markdown h1:first-child,
+.msg-markdown h2:first-child,
+.msg-markdown h3:first-child {
+  margin-top: 0;
+}
+
+/* Paragraphs */
+.msg-markdown p {
+  margin: 0 0 0.65rem;
+}
+
+.msg-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+/* Lists */
+.msg-markdown ul,
+.msg-markdown ol {
+  margin: 0.35rem 0 0.65rem 1.4rem;
+  padding: 0;
+}
+
+.msg-markdown li {
+  margin-bottom: 0.3rem;
+  line-height: 1.65;
+}
+
+.msg-markdown li:last-child {
+  margin-bottom: 0;
+}
+
+/* Nested lists */
+.msg-markdown li > ul,
+.msg-markdown li > ol {
+  margin: 0.25rem 0 0.25rem 1rem;
+}
+
+/* Blockquote */
+.msg-markdown blockquote {
+  border-left: 3px solid var(--border-light);
+  margin: 0.6rem 0;
+  padding: 0.4rem 0.85rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Horizontal rule */
+.msg-markdown hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0.85rem 0;
+}
+
+/* Inline code */
+.msg-inline-code {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.875em;
+  color: var(--accent-blue);
+}
+
+/* Table */
+.msg-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.65rem 0;
+  font-size: 0.88rem;
+  overflow-x: auto;
+  display: block;
+}
+
+.msg-markdown th,
+.msg-markdown td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.msg-markdown th {
+  background: var(--bg-elevated);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.msg-markdown td {
+  color: var(--text-secondary);
+}
+
+.msg-markdown tr:nth-child(even) td {
+  background: rgba(255,255,255,0.02);
+}
+
+/* Strong / bold */
+.msg-markdown strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Links */
+.msg-markdown a {
+  color: var(--accent-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.msg-markdown a:hover {
+  opacity: 0.85;
+}
+
+/* ── Code block ──────────────────────────────────────────────────────────── */
+
+.msg-code-block {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin: 0.55rem 0;
+  overflow: hidden;
+}
+
+.msg-code-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.04);
+  border-bottom: 1px solid var(--border);
+}
+
+.msg-code-block__lang {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: 'Outfit', sans-serif;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+}
+
+.msg-code-block__copy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color var(--transition), background var(--transition);
+}
+
+.msg-code-block__copy:hover {
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.06);
+}
+
+.msg-code-block__pre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+
+.msg-code-block__pre code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  white-space: pre;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* ── Status line (web search, etc.) ──────────────────────────────────────── */
+
+.msg-status-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  color: var(--accent-blue);
+}
+
+.msg-status-line--streaming {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.msg-status-line__text {
+  opacity: 0.85;
+}
+
+.msg-status-line__text::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--accent-blue);
+  animation: msg-status-pulse 1.5s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+@keyframes msg-status-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ── Skill chip ──────────────────────────────────────────────────────────── */
+
+.msg-skill-chip {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.msg-skill-chip__label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent-blue);
+  background: rgba(138, 180, 248, 0.1);
+  padding: 2px 10px;
+  border-radius: 12px;
+}
+
+/* ── Citations wrapper ──────────────────────────────────────────────────── */
+
+.msg-citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Mermaid block ───────────────────────────────────────────────────────── */
+
+.mermaid-block {
+  margin: 12px 0;
+  overflow-x: auto;
+  background: #fff;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.mermaid-fallback {
+  margin: 8px 0;
+  padding: 8px;
+  background: var(--bg-surface);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.mermaid-fallback summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--accent-blue);
+}
+
+.mermaid-loading {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}

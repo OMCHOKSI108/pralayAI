@@ -1,0 +1,77 @@
+:root,
+[data-theme="dark"] {
+  /* ── Backgrounds ────────────────────────────────────────────────────── */
+  --bg-base:     #0f0f0f;
+  --bg-surface:  #1a1a1b;
+  --bg-elevated: #212122;
+  --bg-hover:    #2a2a2b;
+  --bg-input:    #1e1e1f;
+
+  /* ── Borders ────────────────────────────────────────────────────────── */
+  --border:       #2f2f30;
+  --border-light: #3a3a3b;
+
+  /* ── Text ────────────────────────────────────────────────────────────── */
+  --text-primary:   #e8eaed;
+  --text-secondary: #9aa0a6;
+  --text-muted:     #5f6368;
+
+  /* ── Gemini-style gradient accents ─────────────────────────────────── */
+  --accent-blue: #8ab4f8;
+  --accent-blue-hover: #aecbfa;
+  --accent-orange: #ff5546;
+  --accent-green: #34d399;
+  --accent-red: #f87171;
+
+  --gradient-accent: linear-gradient(135deg, #4b90ff 0%, #ff5546 50%, #ff6b6b 100%);
+  --gradient-text:   linear-gradient(90deg, #4b90ff, #ff5546);
+
+  /* ── Radii ───────────────────────────────────────────────────────────── */
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-xl:   28px;
+  --radius-pill: 50px;
+
+  /* ── Component-specific tokens ───────────────────────────────────────── */
+  --color-error-text: #f28b82;
+  --color-success-text: #34d399;
+  --greeting-text: #c4c7c5;
+
+  /* ── Shadows ─────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+
+  /* ── Transitions ─────────────────────────────────────────────────────── */
+  --transition:      0.2s ease;
+  --transition-slow: 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── Light mode ──────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-base:     #f8f9fa;
+  --bg-surface:  #ffffff;
+  --bg-elevated: #f0f4f9;
+  --bg-hover:    #e8eaed;
+  --bg-input:    #f0f4f9;
+
+  --border:       #dadce0;
+  --border-light: #e8eaed;
+
+  --text-primary:   #1f1f1f;
+  --text-secondary: #5f6368;
+  --text-muted:     #9aa0a6;
+
+  --accent-blue: #1a73e8;
+  --accent-blue-hover: #1557b0;
+  --accent-green: #137333;
+  --accent-red: #c5221f;
+  --color-error-text: #c5221f;
+  --color-success-text: #137333;
+  --greeting-text: #444746;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+}
