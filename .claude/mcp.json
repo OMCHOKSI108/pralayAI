@@ -1,0 +1,4 @@
+{
+  "mcpServers": {},
+  "notes": "No MCP servers are required for PralayAI right now. Keep this file ready for future integrations such as database explorer, GitHub, filesystem tools, or browser automation."
+}

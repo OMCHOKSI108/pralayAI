@@ -1,0 +1,23 @@
+{
+  "project": "PralayAI",
+  "owner": "Om Choksi",
+  "stack": {
+    "frontend": "React Gemini clone",
+    "backend": "FastAPI",
+    "database": "PostgreSQL",
+    "model": "OMCHOKSI108/Paralay1.1-Merged",
+    "local_inference": "http://localhost:5000/generate",
+    "public_inference": "https://omchoksi108-pralayai-inference-api.hf.space/generate"
+  },
+  "rules": {
+    "do_not_expose_secrets": true,
+    "do_not_commit_model_weights": true,
+    "do_not_rewrite_architecture_without_permission": true,
+    "frontend_calls_backend_only": true,
+    "backend_calls_inference_api": true,
+    "cybersecurity_defensive_only": true
+  },
+  "preferred_change_style": "small_incremental_changes",
+  "default_backend_port": 8000,
+  "default_inference_port": 5000
+}
