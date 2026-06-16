@@ -36,10 +36,12 @@ def _get_chroma_client(user_id: str):
 
 
 def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
+    if overlap >= chunk_size:
+        overlap = max(0, chunk_size // 4)
     chunks = []
     start = 0
     while start < len(text):
-        end = start + chunk_size
+        end = min(start + chunk_size, len(text))
         chunks.append(text[start:end])
         start = end - overlap
         if start >= len(text):

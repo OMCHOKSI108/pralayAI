@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
@@ -25,4 +25,4 @@ class DocumentChunk(Base):
     embedding_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     page_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)

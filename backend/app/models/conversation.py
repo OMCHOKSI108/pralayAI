@@ -1,8 +1,8 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -20,7 +20,7 @@ class Conversation(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
 
     user_id: Mapped[Optional[str]] = mapped_column(
-        String(36), nullable=True, index=True,
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True,
     )
 
     pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -28,11 +28,11 @@ class Conversation(Base):
     message_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False,
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False,
     )
 
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False,
+        DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False,
     )
 
     messages = relationship(

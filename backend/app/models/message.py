@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
@@ -29,7 +29,7 @@ class Message(Base):
     tokens_used: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False,
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False,
     )
 
     conversation = relationship("Conversation", back_populates="messages")

@@ -38,6 +38,7 @@ from app.routes.feedback_routes import router as feedback_router
 from app.routes.memory_routes import router as memory_router
 from app.routes.document_routes import router as document_router
 from app.routes.context_routes import router as context_router
+from app.routes.token_routes import router as token_router
 
 
 def create_tables():
@@ -67,6 +68,7 @@ app.include_router(feedback_router)
 app.include_router(memory_router)
 app.include_router(document_router)
 app.include_router(context_router)
+app.include_router(token_router)
 
 
 @app.on_event("startup")

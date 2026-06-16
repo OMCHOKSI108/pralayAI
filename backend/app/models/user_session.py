@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -22,11 +22,11 @@ class UserSession(Base):
         String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4())
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime, default=lambda: datetime.now(timezone.utc), nullable=False
     )
     expires_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=lambda: datetime.utcnow() + timedelta(days=SESSION_EXPIRE_DAYS),
+        default=lambda: datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRE_DAYS),
         nullable=False,
     )
 

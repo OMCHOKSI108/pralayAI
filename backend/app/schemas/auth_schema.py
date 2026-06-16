@@ -90,7 +90,6 @@ class UpdateProfileRequest(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
     new_password: str
 
     @field_validator("new_password")

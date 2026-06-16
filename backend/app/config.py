@@ -24,13 +24,6 @@ class Settings(BaseSettings):
     WEB_SEARCH_ENABLED: bool = True
     WEB_FETCH_TIMEOUT_MS: int = 10000
     MAX_RESEARCH_SOURCES: int = 8
-    MAX_UPLOAD_SIZE_MB: int = 20
-
-    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
-    RAG_TOP_K: int = 5
-    RAG_SCORE_THRESHOLD: float = 0.3
-    RAG_CHROMA_PATH: str = "data/chromadb"
-
     MEMORY_ENABLED: bool = True
     MEMORY_EXTRACTION_ENABLED: bool = True
     DEEP_RESEARCH_ENABLED: bool = True
@@ -44,11 +37,14 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = str(BACKEND_ROOT / "uploads")
     CHROMA_PATH: str = str(BACKEND_ROOT / "chroma_db")
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    MAX_UPLOAD_SIZE_MB: int = 20
     MAX_FILE_SIZE_MB: int = 20
     RAG_TOP_K: int = 5
     RAG_SIMILARITY_THRESHOLD: float = 0.25   # cosine distance; lower = more similar
+    RAG_SCORE_THRESHOLD: float = 0.25
     CHUNK_SIZE: int = 800
     CHUNK_OVERLAP: int = 120
+    RAG_CHROMA_PATH: str = "data/chromadb"
 
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),

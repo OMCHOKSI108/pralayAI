@@ -1,7 +1,6 @@
 import hashlib
 import logging
 import secrets
-from datetime import datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session

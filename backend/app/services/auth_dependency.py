@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -20,7 +20,7 @@ def get_current_user(
         db.query(UserSession)
         .filter(
             UserSession.token == token,
-            UserSession.expires_at > datetime.utcnow(),
+            UserSession.expires_at > datetime.now(timezone.utc),
         )
         .first()
     )

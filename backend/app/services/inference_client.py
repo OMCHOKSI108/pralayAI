@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 import requests
 
@@ -13,19 +14,40 @@ class InferenceClientError(Exception):
 
 def call_inference_api(
     message: str,
-    max_new_tokens: int = 300,
-    temperature: float = 0.7,
-    top_p: float = 0.9,
+    max_new_tokens: int = 512,
+    temperature: float = 0.1,
+    top_p: float = 0.8,
+    system_prompt: Optional[str] = None,
 ) -> dict:
-    payload = {
-        "prompt": message,
-        "max_new_tokens": max_new_tokens,
-        "temperature": temperature,
-        "top_p": top_p,
-    }
+    """
+    Call the inference API with properly structured messages.
 
-    logger.info("Inference request: url=%s max_tokens=%s temp=%s top_p=%s msg_len=%s",
-                settings.INFERENCE_API_URL, max_new_tokens, temperature, top_p, len(message))
+    When system_prompt is provided the request is sent as a messages list
+    (system + user roles) so the inference server applies its chat template
+    correctly.  When omitted the raw prompt string is used.
+    """
+    if system_prompt is not None:
+        payload = {
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message},
+            ],
+            "max_new_tokens": max_new_tokens,
+            "temperature": temperature,
+            "top_p": top_p,
+        }
+    else:
+        payload = {
+            "prompt": message,
+            "max_new_tokens": max_new_tokens,
+            "temperature": temperature,
+            "top_p": top_p,
+        }
+
+    logger.info(
+        "Inference request: url=%s max_tokens=%s temp=%s top_p=%s msg_len=%s",
+        settings.INFERENCE_API_URL, max_new_tokens, temperature, top_p, len(message),
+    )
 
     try:
         response = requests.post(
@@ -42,8 +64,10 @@ def call_inference_api(
         model = data.get("model", "unknown")
         device = data.get("device", "unknown")
 
-        logger.info("Inference response: model=%s device=%s latency=%ss resp_len=%s",
-                    model, device, latency, len(resp_text))
+        logger.info(
+            "Inference response: model=%s device=%s latency=%ss resp_len=%s",
+            model, device, latency, len(resp_text),
+        )
 
         return {
             "response": resp_text,
@@ -67,6 +91,4 @@ def call_inference_api(
 
     except ValueError as error:
         logger.error("Inference API returned invalid JSON")
-        raise InferenceClientError(
-            "Inference API returned invalid JSON"
-        ) from error
+        raise InferenceClientError("Inference API returned invalid JSON") from error

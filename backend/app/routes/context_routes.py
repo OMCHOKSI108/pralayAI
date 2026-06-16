@@ -56,7 +56,7 @@ def update_context(
         raise HTTPException(status_code=404, detail="Session not found")
 
     ctx = _get_or_create_context(db, session_id)
-    update_data = body.model_dump(exclude_unset=True)
+    update_data = body.model_dump(exclude_unset=True, exclude_none=True)
     for key, value in update_data.items():
         setattr(ctx, key, value)
     ctx.updated_at = datetime.now(timezone.utc)

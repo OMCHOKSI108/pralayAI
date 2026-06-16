@@ -12,8 +12,7 @@ class ToolCallOut(BaseModel):
     status: str
     latency_ms: Optional[int]
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class ResearchSourceOut(BaseModel):
@@ -24,8 +23,7 @@ class ResearchSourceOut(BaseModel):
     relevance: float
     source_type: str
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class AgentRunOut(BaseModel):
@@ -37,8 +35,7 @@ class AgentRunOut(BaseModel):
     status: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class AgentRunDetailOut(BaseModel):
@@ -52,5 +49,4 @@ class AgentRunDetailOut(BaseModel):
     tool_calls: List[ToolCallOut] = []
     research_sources: List[ResearchSourceOut] = []
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

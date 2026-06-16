@@ -1,6 +1,6 @@
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
@@ -8,6 +8,220 @@ from sqlalchemy.orm import Session
 from app.models.memory import Memory
 
 logger = logging.getLogger("pralayai.memory")
+
+
+# ── Structured family/personal fact extraction ────────────────────────────────
+
+def extract_family_facts(message: str) -> Dict[str, str]:
+    """
+    Extract structured family/personal facts from a user message.
+
+    Handles simple forms ("my sister is Tisha") and complex multi-fact
+    sentences ("my father have two children one is Om i am Male and
+    Another is Tisha she is Female").
+
+    Returns a dict of {fact_key: value}, e.g.:
+        {
+            "father_name": "Chirag",
+            "user_name": "Om",
+            "user_gender": "male",
+            "sister_name": "Tisha",
+        }
+    """
+    facts: Dict[str, str] = {}
+    lower = message.lower()
+
+    # ── Father / mother ───────────────────────────────────────────────────
+    m = re.search(
+        r"\bmy\s+(?:father|dad|papa|baba)(?:'s)?\s+(?:name\s+)?(?:is|=|was)\s*([A-Za-z]+)",
+        message, re.IGNORECASE,
+    )
+    if m:
+        facts["father_name"] = m.group(1).strip().capitalize()
+
+    m = re.search(
+        r"\bmy\s+(?:mother|mom|mummy|maa|mama)(?:'s)?\s+(?:name\s+)?(?:is|=|was)\s*([A-Za-z]+)",
+        message, re.IGNORECASE,
+    )
+    if m:
+        facts["mother_name"] = m.group(1).strip().capitalize()
+
+    # ── Direct sibling names ──────────────────────────────────────────────
+    m = re.search(
+        r"\bmy\s+sister(?:'s)?\s+(?:name\s+)?(?:is|=|was)\s*([A-Za-z]+)",
+        message, re.IGNORECASE,
+    )
+    if m:
+        facts["sister_name"] = m.group(1).strip().capitalize()
+
+    m = re.search(
+        r"\bmy\s+brother(?:'s)?\s+(?:name\s+)?(?:is|=|was)\s*([A-Za-z]+)",
+        message, re.IGNORECASE,
+    )
+    if m:
+        facts["brother_name"] = m.group(1).strip().capitalize()
+
+    # ── Spouse ────────────────────────────────────────────────────────────
+    m = re.search(
+        r"\bmy\s+(?:wife|husband|spouse|partner)(?:'s)?\s+(?:name\s+)?(?:is|=|was)\s*([A-Za-z]+)",
+        message, re.IGNORECASE,
+    )
+    if m:
+        facts["spouse_name"] = m.group(1).strip().capitalize()
+
+    # ── Children ─────────────────────────────────────────────────────────
+    m = re.search(
+        r"\bmy\s+(?:son|daughter|child|kid)(?:'s)?\s+(?:name\s+)?(?:is|=|was)\s*([A-Za-z]+)",
+        message, re.IGNORECASE,
+    )
+    if m:
+        facts["child_name"] = m.group(1).strip().capitalize()
+
+    # ── "one is X i am Male" → user name + gender ─────────────────────────
+    # Handles "one is Om i am Male and Another is Tisha she is Female"
+    m = re.search(
+        r"\bone\s+is\s+([A-Za-z]+)\s+i\s+am\s+(male|female|man|woman|boy|girl)\b",
+        message, re.IGNORECASE,
+    )
+    if m:
+        candidate = m.group(1).strip().capitalize()
+        gender_str = m.group(2).lower()
+        if candidate.lower() not in {"male", "female", "man", "woman", "boy", "girl", "a", "an"}:
+            if "user_name" not in facts:
+                facts["user_name"] = candidate
+        facts["user_gender"] = "female" if gender_str in {"female", "woman", "girl"} else "male"
+
+    # ── "another/other is X she/he is Female/Male" → sibling ─────────────
+    m = re.search(
+        r"\b(?:another|other|second)\s+is\s+([A-Za-z]+)\s+(?:she|he|they)\s+is\s+(male|female|man|woman|boy|girl)\b",
+        message, re.IGNORECASE,
+    )
+    if m:
+        sibling_name = m.group(1).strip().capitalize()
+        sibling_gender_str = m.group(2).lower()
+        sibling_gender = "female" if sibling_gender_str in {"female", "woman", "girl"} else "male"
+        if sibling_gender == "female" and "sister_name" not in facts:
+            facts["sister_name"] = sibling_name
+        elif sibling_gender == "male" and "brother_name" not in facts:
+            facts["brother_name"] = sibling_name
+
+    # ── User name from "my name is X" ────────────────────────────────────
+    m = re.search(
+        r"\bmy\s+(?:full\s+)?name\s+is\s+([A-Za-z]+)\b",
+        message, re.IGNORECASE,
+    )
+    if m and "user_name" not in facts:
+        candidate = m.group(1).strip().capitalize()
+        if candidate.lower() not in {"male", "female", "man", "woman", "boy", "girl"}:
+            facts["user_name"] = candidate
+
+    # ── "i am X" → name (if X looks like a proper name, not a gender) ────
+    m = re.search(
+        r"\bi\s+(?:am|'m)\s+([A-Z][a-z]{1,20})\b",
+        message,
+    )
+    if m and "user_name" not in facts:
+        candidate = m.group(1).strip()
+        if candidate.lower() not in {"male", "female", "man", "woman", "boy", "girl",
+                                      "a", "an", "the", "not", "also", "just"}:
+            facts["user_name"] = candidate
+
+    # ── User gender ───────────────────────────────────────────────────────
+    if "user_gender" not in facts:
+        m = re.search(
+            r"\bi\s+(?:am|'m)\s+(male|female|boy|girl|man|woman)\b",
+            message, re.IGNORECASE,
+        )
+        if m:
+            g = m.group(1).lower()
+            facts["user_gender"] = "female" if g in {"female", "girl", "woman"} else "male"
+
+    # ── Generic "my <thing> is <value>" for non-family keys ───────────────
+    _family_keys = {"father", "dad", "mother", "mom", "sister", "brother",
+                    "wife", "husband", "son", "daughter", "name", "full name"}
+    for gm in re.finditer(r"\bmy\s+(\w+(?:\s+\w+)?)\s+is\s+([A-Za-z0-9\s]+?)(?:\s+and|\.|!|,|$)",
+                          message, re.IGNORECASE):
+        key = gm.group(1).strip().lower()
+        value = gm.group(2).strip()
+        if key not in _family_keys and key not in facts and len(value) < 50:
+            facts[key] = value.capitalize()
+
+    if facts:
+        logger.info("Family facts extracted: %s", {k: v for k, v in facts.items()})
+
+    return facts
+
+
+def generate_memory_confirmation(facts: Dict[str, str], original_message: str) -> str:
+    """Build a natural confirmation response after storing personal facts."""
+    if not facts:
+        return (
+            "I've noted that. If you'd like me to remember specific details "
+            "for our conversation, feel free to share them."
+        )
+
+    user_name = facts.get("user_name", "")
+    greeting = f"Got it{', ' + user_name if user_name else ''}."
+
+    lines = [greeting, "I'll remember for our conversation:"]
+    _labels = {
+        "user_name": "Your name",
+        "user_gender": "Your gender",
+        "father_name": "Your father's name",
+        "mother_name": "Your mother's name",
+        "sister_name": "Your sister's name",
+        "brother_name": "Your brother's name",
+        "spouse_name": "Your spouse's name",
+        "child_name": "Your child's name",
+    }
+    for key, value in facts.items():
+        label = _labels.get(key, f"Your {key.replace('_', ' ')}")
+        lines.append(f"- {label}: {value}")
+
+    lines.append(
+        "\nFeel free to ask me anything — I'll use this context in our conversation."
+    )
+    return "\n".join(lines)
+
+
+def answer_from_memory(memories: "List[Memory]", query: str) -> str:
+    """
+    Build a factual answer from retrieved memories.
+    Returns None-equivalent string if memory is empty.
+    """
+    if not memories:
+        return (
+            "I don't have that information from our conversation yet. "
+            "Feel free to share it and I'll remember it for you."
+        )
+
+    query_lower = query.lower()
+
+    # Try to answer a specific family member question
+    _targets = [
+        (["sister"], "sister_name", "Your sister's name is {}."),
+        (["brother"], "brother_name", "Your brother's name is {}."),
+        (["father", "dad", "papa"], "father_name", "Your father's name is {}."),
+        (["mother", "mom", "mummy", "maa"], "mother_name", "Your mother's name is {}."),
+        (["wife", "husband", "spouse"], "spouse_name", "Your spouse's name is {}."),
+        (["son", "daughter", "child", "kid"], "child_name", "Your child's name is {}."),
+        (["name"], "user_name", "Your name is {}."),
+    ]
+
+    for keywords, memory_key, template in _targets:
+        if any(kw in query_lower for kw in keywords):
+            for mem in memories:
+                if mem.key.lower() == memory_key or memory_key.replace("_", " ") in mem.key.lower():
+                    return template.format(mem.value)
+
+    # Fallback: return all relevant memories
+    lines = ["Based on what you've told me:"]
+    seen = set()
+    for mem in memories[:5]:
+        if mem.key not in seen:
+            lines.append(f"- {mem.key.replace('_', ' ').capitalize()}: {mem.value}")
+            seen.add(mem.key)
+    return "\n".join(lines)
 
 
 EXPLICIT_MEMORY_TRIGGERS = {
@@ -88,7 +302,7 @@ def create_memory(db: Session, user_id: str, key: str, value: str,
         existing.value = value
         existing.confidence = confidence
         existing.source = source
-        existing.updated_at = datetime.utcnow()
+        existing.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(existing)
         logger.debug("Memory updated: user_id=%s key=%s source=%s", user_id, key, source)
@@ -117,8 +331,10 @@ def get_user_memories(db: Session, user_id: str, include_deleted: bool = False) 
     return q.order_by(Memory.updated_at.desc()).all()
 
 
-def get_relevant_memories(db: Session, user_id: str, query: str, max_memories: int = 5) -> List[Memory]:
+def get_relevant_memories(db: Session, user_id: str, query: str, max_memories: int = 5, conversation_id: Optional[str] = None) -> List[Memory]:
     memories = get_user_memories(db, user_id)
+    if conversation_id:
+        memories = [m for m in memories if m.conversation_id == conversation_id]
     query_lower = query.lower()
     query_words = set(query_lower.split())
 
@@ -128,13 +344,11 @@ def get_relevant_memories(db: Session, user_id: str, query: str, max_memories: i
         key_lower = m.key.lower()
         value_lower = m.value.lower()
 
-        # Exact key or value found in query
         if key_lower in query_lower:
             score += 3
         if value_lower in query_lower:
             score += 2
 
-        # Any word from key/value overlaps with query words
         key_words = set(key_lower.split())
         value_words = set(value_lower.split())
         common_with_key = query_words & key_words
@@ -142,7 +356,6 @@ def get_relevant_memories(db: Session, user_id: str, query: str, max_memories: i
         score += len(common_with_key) * 2.0
         score += len(common_with_value) * 1.5
 
-        # Partial word match (e.g. "mother" in "mother_age")
         for qw in query_words:
             if any(kw.startswith(qw) or qw.startswith(kw) for kw in key_words):
                 score += 1.5
@@ -153,8 +366,8 @@ def get_relevant_memories(db: Session, user_id: str, query: str, max_memories: i
 
     scored.sort(key=lambda x: x[0], reverse=True)
     relevant = [m for s, m in scored if s > 0][:max_memories]
-    logger.debug("Memory recall: user_id=%s query_len=%s total_memories=%s relevant=%s",
-                 user_id, len(query), len(memories), len(relevant))
+    logger.debug("Memory recall: user_id=%s conv=%s query_len=%s total=%s relevant=%s",
+                 user_id, conversation_id, len(query), len(memories), len(relevant))
     return relevant
 
 
@@ -174,7 +387,7 @@ def update_memory(db: Session, memory_id: str, user_id: str,
         memory.value = value
     if confidence is not None:
         memory.confidence = confidence
-    memory.updated_at = datetime.utcnow()
+    memory.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(memory)
     return memory
@@ -188,7 +401,7 @@ def delete_memory(db: Session, memory_id: str, user_id: str) -> bool:
     ).first()
     if not memory:
         return False
-    memory.deleted_at = datetime.utcnow()
+    memory.deleted_at = datetime.now(timezone.utc)
     db.commit()
     return True
 
@@ -197,7 +410,7 @@ def clear_user_memories(db: Session, user_id: str) -> int:
     count = db.query(Memory).filter(
         Memory.user_id == user_id,
         Memory.deleted_at.is_(None),
-    ).update({"deleted_at": datetime.utcnow()})
+    ).update({"deleted_at": datetime.now(timezone.utc)})
     db.commit()
     return count
 

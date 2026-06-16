@@ -26,10 +26,14 @@ class ProcessSummary(BaseModel):
 class EnhancedChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=8000)
     conversation_id: Optional[str] = None
-    max_new_tokens: int = Field(default=300, ge=1, le=2000)
-    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
-    top_p: float = Field(default=0.9, ge=0.0, le=1.0)
+    max_new_tokens: int = Field(default=512, ge=1, le=2000)
+    temperature: float = Field(default=0.1, ge=0.0, le=2.0)
+    top_p: float = Field(default=0.8, ge=0.0, le=1.0)
     skill_override: Optional[str] = None
+    format: Optional[str] = Field(
+        default="medium",
+        description="Response style: short | medium | detailed | step-by-step | table",
+    )
 
 
 class EnhancedChatResponse(BaseModel):

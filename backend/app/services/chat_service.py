@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -9,6 +9,7 @@ from app.models.message import Message
 from app.models.model_run import ModelRun
 from app.schemas.chat_schema import ChatRequest, ChatResponse
 from app.services.inference_client import InferenceClientError, call_inference_api
+from app.services.pregen_classifier import classify_input
 from app.services.safety_service import is_unsafe_prompt, safe_refusal_response
 
 
@@ -78,7 +79,7 @@ def handle_chat(
         )
         db.add(model_run)
 
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(assistant_message)
 
@@ -90,6 +91,42 @@ def handle_chat(
             status="blocked",
             latency_seconds=latency_seconds,
             source="safety_filter",
+        )
+
+    classification = classify_input(request.message)
+    if classification.skip_model and classification.safe_response:
+        assistant_text = classification.safe_response
+        latency_seconds = round(time.time() - started, 3)
+
+        assistant_message = Message(
+            conversation_id=conversation.id,
+            role="assistant",
+            content=assistant_text,
+        )
+        db.add(assistant_message)
+
+        model_run = ModelRun(
+            conversation_id=conversation.id,
+            provider="classifier",
+            model_name="pregen_classifier",
+            status="success",
+            latency_ms=int(latency_seconds * 1000),
+            error_message=None,
+        )
+        db.add(model_run)
+
+        conversation.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(assistant_message)
+
+        return ChatResponse(
+            conversation_id=conversation.id,
+            user_message_id=user_message.id,
+            assistant_message_id=assistant_message.id,
+            assistant_message=assistant_text,
+            status="success",
+            latency_seconds=latency_seconds,
+            source="classifier",
         )
 
     try:
@@ -120,7 +157,7 @@ def handle_chat(
         )
         db.add(model_run)
 
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(assistant_message)
 
@@ -158,7 +195,7 @@ def handle_chat(
         )
         db.add(assistant_message)
 
-        conversation.updated_at = datetime.utcnow()
+        conversation.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(assistant_message)
 

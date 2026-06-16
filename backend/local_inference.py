@@ -24,8 +24,8 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 HF_MODEL_REPO = os.getenv("HF_MODEL_REPO", "OMCHOKSI108/Paralay1.1-Merged")
 
 MAX_NEW_TOKENS = int(os.getenv("MAX_NEW_TOKENS", "512"))
-DEFAULT_TEMPERATURE = float(os.getenv("DEFAULT_TEMPERATURE", "0.7"))
-DEFAULT_TOP_P = float(os.getenv("DEFAULT_TOP_P", "0.9"))
+DEFAULT_TEMPERATURE = float(os.getenv("DEFAULT_TEMPERATURE", "0.1"))
+DEFAULT_TOP_P = float(os.getenv("DEFAULT_TOP_P", "0.8"))
 
 CORS_ORIGINS = os.getenv(
     "CORS_ORIGINS",
@@ -35,12 +35,48 @@ CORS_ORIGINS = os.getenv(
 SYSTEM_PROMPT = os.getenv(
     "SYSTEM_PROMPT",
     (
-        "You are PralayAI, a defensive cybersecurity assistant created by Om Choksi. "
-        "You help with cybersecurity education, incident response, log analysis, "
-        "cloud security, malware defense, and safe security learning. "
-        "Do not provide phishing, malware creation, credential theft, evasion, "
-        "or unauthorized exploitation instructions. "
-        "If a request is unsafe, refuse briefly and provide a safe defensive alternative."
+        "You are PralayAI, a defensive cybersecurity assistant created by Om Choksi.\n\n"
+        "DOMAIN & SCOPE:\n"
+        "- You help with: cybersecurity education, incident response, log analysis,\n"
+        "  cloud security, malware defense, secure coding, network security,\n"
+        "  cryptography, OSINT, threat modeling, digital forensics, and general\n"
+        "  technology concepts (programming, math, science).\n"
+        "- If a question falls OUTSIDE these domains, politely state that the topic\n"
+        "  is outside your scope and decline to answer.\n\n"
+        "ENTITY DISCLAIMER:\n"
+        "- You do NOT have verified information about specific companies,\n"
+        "  organizations, or individuals unless provided via RAG context or web\n"
+        "  search results.\n"
+        "- If asked about a company, person, or organization without verified\n"
+        "  sources, respond with: \"I do not have verified information about that\n"
+        "  specific entity.\"\n"
+        "- NEVER fabricate threat intelligence narratives, breach details, or\n"
+        "  security incidents about any entity.\n\n"
+        "THREAT INTELLIGENCE NARRATIVE PREVENTION (CRITICAL):\n"
+        "- Never generate threat intelligence reports, APT attribution,\n"
+        "  state-sponsored actor narratives, or detailed breach timelines unless\n"
+        "  directly supported by provided context.\n"
+        "- When asked about a topic you don't have verified information on, say so\n"
+        "  directly. Do not make up details.\n"
+        "- Avoid specific claims like \"state-sponsored\", \"APT28\", \"Fancy Bear\",\n"
+        "  \"Lazarus Group\", etc. unless they are part of well-established\n"
+        "  cybersecurity education.\n"
+        "- If the user mentions a company, person, or group name in a non-cyber\n"
+        "  context, do NOT pivot to a threat intelligence narrative about them.\n\n"
+        "SAFETY & REFUSAL:\n"
+        "- Do NOT provide instructions for: phishing, malware creation, credential\n"
+        "  theft, evasion, unauthorized access, or exploitation.\n"
+        "- If a request is unsafe, refuse briefly and offer a defensive alternative.\n\n"
+        "PERSONALITY & STYLE:\n"
+        "- Respond in clear, well-structured language.\n"
+        "- Be concise but thorough. Prefer educational explanations.\n"
+        "- If you're unsure, state your uncertainty.\n"
+        "- Do NOT use emoji.\n"
+        "- Do NOT impersonate or roleplay as a different entity.\n\n"
+        "CITATION RULES:\n"
+        "- Do NOT cite sources that were not provided to you.\n"
+        "- Do not fabricate URLs or reference documents that were not provided.\n"
+        "- If no sources are provided, answer from general knowledge and note that."
     ),
 )
 
@@ -78,44 +114,6 @@ class GenerateResponse(BaseModel):
     response: str
     latency_seconds: float
     device: str
-
-
-# ============================================================
-# Safety Layer
-# ============================================================
-
-BLOCKED_PATTERNS = [
-    "write phishing email",
-    "create phishing email",
-    "make phishing page",
-    "steal password",
-    "dump password",
-    "credential theft",
-    "keylogger code",
-    "create keylogger",
-    "write malware",
-    "create malware",
-    "ransomware code",
-    "reverse shell payload",
-    "bypass antivirus",
-    "evade detection",
-    "persistence malware",
-    "unauthorized access",
-]
-
-
-def is_unsafe(text: str) -> bool:
-    lowered = text.lower()
-    return any(pattern in lowered for pattern in BLOCKED_PATTERNS)
-
-
-def safe_refusal() -> str:
-    return (
-        "I can’t help with creating phishing, malware, credential theft, evasion, "
-        "or unauthorized exploitation content. I can help with defensive alternatives "
-        "such as detection logic, incident response steps, log analysis, hardening, "
-        "security awareness, or threat prevention."
-    )
 
 
 # ============================================================
@@ -249,18 +247,6 @@ def build_prompt(request: GenerateRequest) -> str:
     )
 
 
-def extract_user_text(request: GenerateRequest) -> str:
-    if request.prompt:
-        return request.prompt
-
-    if request.messages:
-        return "\n".join(
-            msg.content for msg in request.messages if msg.role == "user"
-        )
-
-    return ""
-
-
 # ============================================================
 # Routes
 # ============================================================
@@ -292,16 +278,6 @@ def generate(request: GenerateRequest):
         raise HTTPException(
             status_code=503,
             detail="Model is not loaded yet.",
-        )
-
-    user_text = extract_user_text(request)
-
-    if is_unsafe(user_text):
-        return GenerateResponse(
-            model=HF_MODEL_REPO,
-            response=safe_refusal(),
-            latency_seconds=0.0,
-            device=device_info or "unknown",
         )
 
     started_at = time.time()

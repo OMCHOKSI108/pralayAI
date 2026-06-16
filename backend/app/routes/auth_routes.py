@@ -104,7 +104,7 @@ def password_reset_verify(
             PasswordReset.email == request.email,
             PasswordReset.completed == False,
             PasswordReset.otp == request.otp,
-            PasswordReset.otp_expires_at > datetime.utcnow(),
+            PasswordReset.otp_expires_at > datetime.now(timezone.utc),
         )
         .order_by(PasswordReset.created_at.desc())
         .first()
@@ -135,7 +135,7 @@ def password_reset_confirm(
             PasswordReset.email == request.email,
             PasswordReset.completed == False,
             PasswordReset.otp == request.otp,
-            PasswordReset.otp_expires_at > datetime.utcnow(),
+            PasswordReset.otp_expires_at > datetime.now(timezone.utc),
         )
         .order_by(PasswordReset.created_at.desc())
         .first()
@@ -163,12 +163,6 @@ def change_password(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    from app.services.auth_service import verify_password
-
-    if not verify_password(request.current_password, current_user.password_hash):
-        logger.warning("Change password: wrong current password for user_id=%s", current_user.id)
-        raise HTTPException(status_code=400, detail="Current password is incorrect")
-
     current_user.password_hash = hash_password(request.new_password)
     db.commit()
 

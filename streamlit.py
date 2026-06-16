@@ -136,8 +136,8 @@ def send_chat(message, conversation_id=None):
         "message": message,
         "conversation_id": conversation_id,
         "max_new_tokens": 512,
-        "temperature": 0.7,
-        "top_p": 0.9,
+        "temperature": 0.1,
+        "top_p": 0.8,
     }
     return api_post("/api/chat", body)
 
