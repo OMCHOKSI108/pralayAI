@@ -6,13 +6,21 @@
 <tr>
 <td align="center">
 
-**PralayAI** is a full-stack defensive cybersecurity chatbot built using a fine-tuned open-source LLM, FastAPI backend, PostgreSQL chat persistence, and a Gemini-style React frontend.
+**PralayAI** is a full-stack defensive cybersecurity chatbot built using a fine-tuned open-source LLM, FastAPI backend, PostgreSQL chat persistence, and a Flask-based chat frontend.
 
 </td>
 </tr>
 </table>
 
 </div>
+
+---
+
+## 🎬 Live Demo
+
+<p align="center">
+  <img src="docs/pralay.gif" alt="PralayAI Chatbot Demo" width="900"/>
+</p>
 
 ---
 
@@ -283,6 +291,10 @@ The frontend should not directly call Hugging Face or expose any Hugging Face to
 
 ## 🚀 Inference Options
 
+<p align="center">
+  <img src="docs/inference_fastapi.png" alt="PralayAI Inference API FastAPI Docs" width="900"/>
+</p>
+
 ### 1. Local CUDA Inference
 
 Fast local inference endpoint:
@@ -300,7 +312,7 @@ device: cuda
 
 ### 2. Hugging Face Space CPU Inference
 
-Free public inference endpoint:
+Free public inference endpoint — no setup required:
 
 ```txt
 https://omchoksi108-pralayai-inference-api.hf.space/generate
@@ -313,7 +325,7 @@ Observed performance:
 device: cpu
 ```
 
-The Hugging Face Space deployment is free but slower because it runs on CPU.
+The Hugging Face Space deployment is free and publicly accessible, but slower because it runs on CPU. Use local CUDA inference for development and the HF Space for public demos.
 
 ---
 
@@ -436,6 +448,8 @@ PralayAI/
 │   └── PralayModel1_1.ipynb
 │
 ├── docs/
+│   ├── pralay.gif
+│   ├── inference_fastapi.png
 │   ├── dataset.png
 │   ├── training_loss.png
 │   ├── model_training.png
